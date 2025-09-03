@@ -1,0 +1,10 @@
+# общий
+node_modules/
+.DS_Store
+
+# мобильное
+apps/mobile/node_modules/
+apps/mobile/.expo/
+apps/mobile/dist/
+apps/mobile/build/
+apps/mobile/.env
