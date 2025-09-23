@@ -1,10 +1,81 @@
-# общий
+# ===== Общий JS/TS =====
 node_modules/
-.DS_Store
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
 
-# мобильное
-apps/mobile/node_modules/
-apps/mobile/.expo/
-apps/mobile/dist/
-apps/mobile/build/
-apps/mobile/.env
+# Lock-файлы НЕ игнорируем — их НУЖНО коммитить!
+# yarn.lock
+# package-lock.json
+# pnpm-lock.yaml
+
+# ===== ОС / IDE =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# ===== Env & secrets =====
+.env
+.env.*
+**/.env
+**/.env.*
+
+# ===== Expo =====
+.expo/
+.expo-shared/
+**/.expo/
+**/.expo-shared/
+
+# ===== Сборки/артефакты =====
+dist/
+build/
+coverage/
+**/dist/
+**/build/
+*.apk
+*.aab
+*.ipa
+*.app
+
+# ===== React Native: Android =====
+android/.gradle/
+android/.idea/
+android/local.properties
+android/**/build/
+android/app/release/
+android/app/*.keystore
+android/app/*.jks
+
+# Если проект лежит не в корне, а в apps/mobile — те же правила:
+apps/mobile/android/.gradle/
+apps/mobile/android/.idea/
+apps/mobile/android/local.properties
+apps/mobile/android/**/build/
+apps/mobile/android/app/release/
+apps/mobile/android/app/*.keystore
+apps/mobile/android/app/*.jks
+
+# ===== React Native: iOS =====
+ios/Pods/
+ios/build/
+ios/DerivedData/
+**/*.xcuserstate
+**/*.xcuserdatad
+**/*.pbxuser
+
+# В monorepo-пути:
+apps/mobile/ios/Pods/
+apps/mobile/ios/build/
+apps/mobile/ios/DerivedData/
+apps/mobile/ios/**/*.xcuserstate
+apps/mobile/ios/**/*.xcuserdatad
+apps/mobile/ios/**/*.pbxuser
+
+# ===== Expo web/Metro caches (иногда всплывают) =====
+.metro-cache/
+.next/
