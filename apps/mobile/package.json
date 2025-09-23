@@ -27,11 +27,5 @@
     "@types/react": "~19.0.10",
     "typescript": "~5.8.3"
   },
-  "private": true,
-  "scripts": {
-  "start:tunnel": "expo start --tunnel",
-  "start:local": "expo start --localhost",
-  "android": "expo run:android",
-  "eas:build:android": "eas build -p android --profile preview"
-}
+  "private": true
 }

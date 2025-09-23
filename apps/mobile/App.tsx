@@ -9,9 +9,14 @@ import Player from './app/Player';
 import { DailyProgressProvider } from './app/DailyProgress';
 
 import * as Notifications from 'expo-notifications';
-import { SessionProvider, useSession } from './app/session/Session'; // ← ЕДИНСТВЕННЫЙ импорт
+import { useFonts } from 'expo-font';
+
+import { SessionProvider, useSession } from './app/session/Session';
 import Login from './app/auth/Login';
 import Otp from './app/auth/Otp';
+
+import { useEffect } from 'react';
+import { loadSavedLanguage } from './app/i18n/lang';
 
 // Показывать уведомления даже в форграунде
 Notifications.setNotificationHandler({
@@ -26,7 +31,7 @@ const Stack = createNativeStackNavigator();
 
 function RootStacks() {
   const { token, initializing } = useSession();
-  if (initializing) return null; // здесь можно повесить Splash
+  if (initializing) return null; // здесь можно повесить splash
 
   return (
     <NavigationContainer>
@@ -46,17 +51,31 @@ function RootStacks() {
 }
 
 export default function App() {
-  // Разрешения/канал уведомлений (Android)
+  // 1) Загружаем шрифты Rubik
+  const [fontsLoaded] = useFonts({
+    'Rubik-Regular': require('./assets/fonts/Rubik-Regular.ttf'),
+    'Rubik-Medium': require('./assets/fonts/Rubik-Medium.ttf'),
+    'Rubik-SemiBold': require('./assets/fonts/Rubik-SemiBold.ttf'),
+    'Rubik-Bold': require('./assets/fonts/Rubik-Bold.ttf'),
+  });
+  if (!fontsLoaded) return null; // пока шрифты грузятся — ничего не рисуем
+
+  // 2) Разрешения/канал уведомлений (Android)
   useEffect(() => {
+    loadSavedLanguage();
     (async () => {
       await Notifications.requestPermissionsAsync();
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'default',
-          importance: Notifications.AndroidImportance.DEFAULT,
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF0000',
         });
       }
+      
     })();
+    
   }, []);
 
   return (
