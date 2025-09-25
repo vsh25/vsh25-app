@@ -8,6 +8,7 @@ const resources = {
     auth: { login: 'Вход', getCode: 'Получить код', confirm: 'Подтвердить' },
     profile: { title: 'Профиль', language: 'Язык интерфейса', ru: 'Русский', en: 'English' },
     buttons: { profile: 'Профиль', reminders: 'Напоминания' },
+    kb: { title: 'База знаний' },
   }},
   en: { translation: {
     home: { title: 'Home' },
@@ -15,6 +16,7 @@ const resources = {
     auth: { login: 'Sign in', getCode: 'Get code', confirm: 'Confirm' },
     profile: { title: 'Profile', language: 'Interface language', ru: 'Russian', en: 'English' },
     buttons: { profile: 'Profile', reminders: 'Reminders' },
+    kb: { title: 'Knowledge base' },
   }},
 };
 

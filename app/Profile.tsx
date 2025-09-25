@@ -1,90 +1,75 @@
+// app/Profile.tsx
 import React from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, Platform } from 'react-native';
 import UIButton from './ui/Button';
-import { useSession } from './session/Session';
 import { theme } from './theme';
 import * as Notifications from 'expo-notifications';
+import { useSession } from './session/Session';
 import { useTranslation } from 'react-i18next';
+import i18n from './i18n';
+import { setLanguage } from './i18n/lang';
 
 export default function Profile() {
   const { signOut } = useSession();
   const { t } = useTranslation();
+  const current = i18n.language as 'ru' | 'en';
 
-  // Включить ежедневное напоминание на 21:00
-  const enableDailyReminder = async () => {
-    try {
-      // права на уведомления
-      let { status } = await Notifications.getPermissionsAsync();
-      if (status !== 'granted') {
-        ({ status } = await Notifications.requestPermissionsAsync());
-      }
-      if (status !== 'granted') {
-        Alert.alert(
-          t('reminders.noPermTitle', 'Уведомления выключены'),
-          t('reminders.noPermBody', 'Разрешите уведомления в настройках системы.')
-        );
-        return;
-      }
-
-      // снимаем старые расписания и ставим новое
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'VSH25',
-          body: t('reminders.body', 'Время биопрограммы. 10 минут — и день засчитан.'),
-        },
-        trigger: { hour: 21, minute: 0, repeats: true }, // локальное время
-      });
-
-      Alert.alert(
-        t('reminders.enabledTitle', 'Готово'),
-        t('reminders.enabledBody', 'Ежедневное напоминание в 21:00 включено')
-      );
-    } catch (e: any) {
-      Alert.alert('Ошибка', String(e?.message ?? e));
+  // --- уведомления ---
+  const ensurePerms = async () => {
+    let { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') ({ status } = await Notifications.requestPermissionsAsync());
+    if (status !== 'granted') {
+      Alert.alert('Уведомления выключены', 'Разрешите уведомления в настройках системы.');
+      return false;
     }
+    return true;
   };
 
-  // Отключить все запланированные напоминания
-  const disableReminders = async () => {
-    try {
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      Alert.alert(
-        t('reminders.offTitle', 'Готово'),
-        t('reminders.offBody', 'Ежедневные напоминания отключены')
-      );
-    } catch (e: any) {
-      Alert.alert('Ошибка', String(e?.message ?? e));
-    }
+  const enable21 = async () => {
+    if (!(await ensurePerms())) return;
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    await Notifications.scheduleNotificationAsync({
+      content: { title: 'VSH25', body: t('reminders.body', 'Время биопрограммы. 10 минут — и день засчитан.') },
+      trigger: { hour: 21, minute: 0, repeats: true },
+    });
+    const list = await Notifications.getAllScheduledNotificationsAsync();
+    Alert.alert('Готово', `Напоминание в 21:00 включено. Всего запланировано: ${list.length}.`);
+  };
+
+  const disableAll = async () => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    Alert.alert('Отключено', 'Ежедневные напоминания удалены.');
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{t('profile.title', 'Профиль')}</Text>
 
-      <UIButton
-        title={t('buttons.reminders', 'Напоминания')}
-        onPress={enableDailyReminder}
-        fullWidth
-      />
+      {/* Язык */}
+      <Text style={styles.sectionTitle}>{t('profile.language', 'Язык интерфейса')}</Text>
+      <View style={styles.row}>
+        <UIButton
+          title={t('profile.ru', 'Русский')}
+          variant={current === 'ru' ? 'primary' : 'outline'}
+          onPress={() => setLanguage('ru')}
+        />
+        <UIButton
+          title={t('profile.en', 'English')}
+          variant={current === 'en' ? 'primary' : 'outline'}
+          onPress={() => setLanguage('en')}
+          style={{ marginLeft: 8 }}
+        />
+      </View>
 
+      {/* Напоминания */}
+      <View style={styles.spacer} />
+      <UIButton title={t('buttons.reminders', 'Напоминания 21:00')} onPress={enable21} fullWidth />
       <View style={{ height: 12 }} />
+      <UIButton title={t('reminders.turnOff', 'Отключить напоминания')} variant="outline" onPress={disableAll} fullWidth />
 
-      <UIButton
-        title={t('reminders.turnOff', 'Отключить напоминания')}
-        variant="outline"
-        onPress={disableReminders}
-        fullWidth
-      />
-
-      <View style={{ height: 12 }} />
-
-      <UIButton
-        title={t('auth.logout', 'Выйти')}
-        variant="outline"
-        onPress={signOut}
-        fullWidth
-      />
+      {/* Выход */}
+      <View style={styles.spacer} />
+      <UIButton title={t('auth.logout', 'Выйти')} variant="outline" onPress={signOut} fullWidth />
     </View>
   );
 }
@@ -92,4 +77,7 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, backgroundColor: theme.color.bg },
   title: { fontSize: 22, fontWeight: '600', marginBottom: 16, color: theme.color.text },
+  sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8, color: theme.color.muted },
+  row: { flexDirection: 'row' },
+  spacer: { height: 24 },
 });

@@ -1,30 +1,34 @@
+// app/Player.tsx
 import React, { useRef, useLayoutEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
+import { useKeepAwake } from 'expo-keep-awake';
 import UIButton from './ui/Button';
 import { useDailyProgress } from './DailyProgress';
-import { useRateVideo } from './services/hooks'; // ← добавили
+import { useRateVideo } from './services/hooks';
+import { useTranslation } from 'react-i18next';
 
-type RouteParams = { id: 'bio' | 'pill'; title?: string; src: string };
+type RouteParams = { id: 'bio' | 'pill'; title?: string; src: string; minPercent?: number };
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function Player({ route, navigation }: { route: any; navigation: any }) {
-  const { id, title = 'Player', src } = (route?.params || {}) as RouteParams;
+  const { id, title = 'Player', src, minPercent = 0.9 } = (route?.params || {}) as RouteParams;
   const videoRef = useRef<Video>(null);
+
+  useKeepAwake(); // пока открыт Player — экран не гаснет
+
+  const { t } = useTranslation();
+  const { markCompletedToday, setDayStatus, isCompletedToday } = useDailyProgress();
+  const rateVideo = useRateVideo();
 
   // прогресс
   const [percent, setPercent] = useState(0);
-  const [completed, setCompleted] = useState(false);
+  const [completed, setCompleted] = useState<boolean>(isCompletedToday(id));
 
-  // “Завершено” + рейтинг
+  // оверлей «завершено» + рейтинг
   const [showDone, setShowDone] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
-
-  const { markCompletedToday, setDayStatus } = useDailyProgress();
-  const rateVideo = useRateVideo(); // ← мутатор API (пока в MOCK-режиме просто «успех»)
 
   useLayoutEffect(() => {
     navigation.setOptions({ title });
@@ -36,25 +40,20 @@ export default function Player({ route, navigation }: { route: any; navigation: 
     const p = Math.min(100, Math.round((st.positionMillis / st.durationMillis) * 100));
     setPercent(p);
 
-    // засчитываем один раз
-    if (!completed && (st.didJustFinish || p >= 90)) {
+    // засчитываем один раз при финише или при достижении порога
+    if (!completed && (st.didJustFinish || p / 100 >= minPercent)) {
       setCompleted(true);
-      markCompletedToday(id);           // ✓ на сегодня (локально)
-      setShowDone(true);                // открыть оверлей “Завершено”
+      markCompletedToday(id);   // локально отмечаем день
+      setShowDone(true);        // показываем карточку оценки
     }
   };
 
   const saveAndExit = async () => {
     try {
-      // 1) локально сохраняем оценку в историю за сегодня (чтобы календарь сразу увидел)
       if (rating) setDayStatus(todayISO(), { rating });
-
-      // 2) отправляем оценку на API (в MOCK-режиме вернётся успех; позже включим реальный бэк)
       if (rating) await rateVideo.mutateAsync({ id, rating });
-
       navigation.goBack();
     } catch (e: any) {
-      // не блокируем выход, просто сообщим
       Alert.alert('Не удалось отправить оценку', e?.message ?? 'Попробуйте позже');
       navigation.goBack();
     }
@@ -74,12 +73,21 @@ export default function Player({ route, navigation }: { route: any; navigation: 
         onError={(e) => console.log('Video error', e)}
       />
 
-      {/* маленький оверлей прогресса */}
+      {/* маленький оверлей прогресса слева сверху */}
       <View style={styles.progress}>
-        <Text style={styles.progressText}>{percent}% {completed ? '• засчитано ✓' : ''}</Text>
+        <Text style={styles.progressText}>
+          {percent}% {completed ? `• ${t('player.completed', 'Засчитано')} ✓` : ''}
+        </Text>
       </View>
 
-      {/* экран “Завершено” */}
+      {/* бейдж "Засчитано" справа сверху */}
+      {completed && (
+        <View style={styles.completedBadge}>
+          <Text style={styles.completedText}>{t('player.completed', 'Засчитано')}</Text>
+        </View>
+      )}
+
+      {/* экран “Завершено” с оценкой */}
       {showDone && (
         <View style={styles.doneBackdrop}>
           <View style={styles.doneCard}>
@@ -89,9 +97,7 @@ export default function Player({ route, navigation }: { route: any; navigation: 
             <View style={styles.starsRow}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <Pressable key={n} onPress={() => setRating(n)} style={{ padding: 6 }}>
-                  <Text style={[styles.star, { color: n <= (rating ?? 0) ? '#F59E0B' : '#CBD5E1' }]}>
-                    ★
-                  </Text>
+                  <Text style={[styles.star, { color: n <= (rating ?? 0) ? '#F59E0B' : '#CBD5E1' }]}>★</Text>
                 </Pressable>
               ))}
             </View>
@@ -121,6 +127,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   progressText: { color: '#fff', fontWeight: '600' },
+
+  completedBadge: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#16A34A',
+    borderRadius: 999,
+  },
+  completedText: { color: '#fff', fontWeight: '700' },
 
   doneBackdrop: {
     ...StyleSheet.absoluteFillObject,
