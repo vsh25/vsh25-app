@@ -23,6 +23,8 @@ import { loadSavedLanguage } from './app/i18n/lang';
 // React Query — провайдер для хуков (например, useRateVideo)
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+import Paywall from './app/Paywall';
+
 // Уведомления: показывать даже в форграунде
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -48,6 +50,7 @@ function RootStacks() {
         <Stack.Screen name="Home" component={Home} options={{ title: 'VSH25' }} />
         <Stack.Screen name="Player" component={Player} options={{ title: 'Player' }} />
         <Stack.Screen name="Profile" component={Profile} options={{ title: 'Profile' }} />
+        <Stack.Screen name="Paywall" component={Paywall} options={{ title: 'Подписка' }} />
       </Stack.Navigator>
     );
   }

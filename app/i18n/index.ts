@@ -9,6 +9,8 @@ const resources = {
     profile: { title: 'Профиль', language: 'Язык интерфейса', ru: 'Русский', en: 'English' },
     buttons: { profile: 'Профиль', reminders: 'Напоминания' },
     kb: { title: 'База знаний' },
+    paywall: { title: 'Подписка', buy: 'Купить', restore: 'Восстановить покупку' },
+
   }},
   en: { translation: {
     home: { title: 'Home' },
@@ -17,6 +19,8 @@ const resources = {
     profile: { title: 'Profile', language: 'Interface language', ru: 'Russian', en: 'English' },
     buttons: { profile: 'Profile', reminders: 'Reminders' },
     kb: { title: 'Knowledge base' },
+    paywall: { title: 'Subscription', buy: 'Buy', restore: 'Restore purchase' },
+
   }},
 };
 

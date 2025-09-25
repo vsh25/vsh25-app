@@ -119,6 +119,9 @@ export default function Home({ navigation }: any) {
         onPress={() => navigation.navigate('Player', pill)}
       />
 
+<View style={styles.gap16} />
+<UIButton title="Подписка" onPress={() => navigation.navigate('Paywall')} />
+
       <View style={styles.gap16} />
 
       <UIButton title="Тест-уведомление (10 сек)" onPress={testNotification10s} />
