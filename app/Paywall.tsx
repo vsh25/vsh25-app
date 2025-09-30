@@ -2,10 +2,22 @@ import React from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import UIButton from './ui/Button';
 import { theme } from './theme';
+import { useSubscription } from './subscription/Subscription'; // ← добавили
 
-export default function Paywall() {
-  const buy = () => Alert.alert('Покупка', 'Это заглушка. Логику IAP добавим позже.');
-  const restore = () => Alert.alert('Восстановление', 'Тоже заглушка. Добавим позже.');
+export default function Paywall({ navigation }: any) {
+  const { activate } = useSubscription(); // ← добавили
+
+  const buy = async () => {
+    await activate();                      // MOCK-покупка
+    Alert.alert('Готово', 'Подписка активирована');
+    navigation.goBack();
+  };
+
+  const restore = async () => {
+    await activate();                      // MOCK-восстановление
+    Alert.alert('Готово', 'Подписка восстановлена');
+    navigation.goBack();
+  };
 
   return (
     <View style={styles.container}>
@@ -24,7 +36,6 @@ export default function Paywall() {
       </View>
 
       <View style={{ height: 16 }} />
-
       <UIButton title="Купить" onPress={buy} fullWidth />
       <View style={{ height: 12 }} />
       <UIButton title="Восстановить покупку" variant="outline" onPress={restore} fullWidth />

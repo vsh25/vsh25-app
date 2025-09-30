@@ -11,10 +11,18 @@ import { useTranslation } from 'react-i18next';
 import { articles } from './content/articles';
 import { useDailyVideos } from './hooks/useDailyVideos';
 
+import { useSubscription } from './subscription/Subscription';
+import { isPaywalled } from './flags/gating';
+
 export default function Home({ navigation }: any) {
   const { isCompletedToday } = useDailyProgress();
   const { t } = useTranslation();
   const { bio, pill } = useDailyVideos();
+  const { active } = useSubscription();
+
+  // блокировка разделов по флагам
+  const bioLocked  = isPaywalled('bio')  && !active;
+  const pillLocked = isPaywalled('pill') && !active;
 
   // --- Уведомления ---
 
@@ -107,20 +115,20 @@ export default function Home({ navigation }: any) {
 
       <Card
         title={bio.title}
-        subtitle="Ежедневная практика для активного долголетия"
-        onPress={() => navigation.navigate('Player', bio)}
+        subtitle={bioLocked ? '🔒 Требует подписку' : 'Ежедневная практика для активного долголетия'}
+        onPress={() => (bioLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', bio))}
       />
 
       <View style={styles.gap12} />
 
       <Card
         title={pill.title}
-        subtitle="Быстрый эффект, когда нет времени"
-        onPress={() => navigation.navigate('Player', pill)}
+        subtitle={pillLocked ? '🔒 Требует подписку' : 'Быстрый эффект, когда нет времени'}
+        onPress={() => (pillLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', pill))}
       />
 
-<View style={styles.gap16} />
-<UIButton title="Подписка" onPress={() => navigation.navigate('Paywall')} />
+      <View style={styles.gap16} />
+      <UIButton title="Подписка" onPress={() => navigation.navigate('Paywall')} />
 
       <View style={styles.gap16} />
 

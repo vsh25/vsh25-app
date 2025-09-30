@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
+import { SubscriptionProvider } from './app/subscription/Subscription';
+
+
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -101,13 +104,15 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClientRef.current}>
-      <SessionProvider>
-        <DailyProgressProvider>
-          <NavigationContainer>
-            <RootStacks />
-          </NavigationContainer>
-        </DailyProgressProvider>
-      </SessionProvider>
-    </QueryClientProvider>
+  <SessionProvider>
+    <SubscriptionProvider>
+      <DailyProgressProvider>
+        <NavigationContainer>
+          <RootStacks />
+        </NavigationContainer>
+      </DailyProgressProvider>
+    </SubscriptionProvider>
+  </SessionProvider>
+</QueryClientProvider>
   );
 }

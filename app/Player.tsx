@@ -1,5 +1,4 @@
-// app/Player.tsx
-import React, { useRef, useLayoutEffect, useState } from 'react';
+import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -7,6 +6,8 @@ import UIButton from './ui/Button';
 import { useDailyProgress } from './DailyProgress';
 import { useRateVideo } from './services/hooks';
 import { useTranslation } from 'react-i18next';
+import { useSubscription } from './subscription/Subscription';
+import { isPaywalled } from './flags/gating';
 
 type RouteParams = { id: 'bio' | 'pill'; title?: string; src: string; minPercent?: number };
 
@@ -16,11 +17,12 @@ export default function Player({ route, navigation }: { route: any; navigation: 
   const { id, title = 'Player', src, minPercent = 0.9 } = (route?.params || {}) as RouteParams;
   const videoRef = useRef<Video>(null);
 
-  useKeepAwake(); // пока открыт Player — экран не гаснет
+  useKeepAwake();
 
   const { t } = useTranslation();
   const { markCompletedToday, setDayStatus, isCompletedToday } = useDailyProgress();
   const rateVideo = useRateVideo();
+  const { active } = useSubscription();
 
   // прогресс
   const [percent, setPercent] = useState(0);
@@ -34,17 +36,26 @@ export default function Player({ route, navigation }: { route: any; navigation: 
     navigation.setOptions({ title });
   }, [navigation, title]);
 
+  // защита: если раздел платный и подписки нет — уводим на Paywall
+  useEffect(() => {
+    if (!active && isPaywalled(id)) {
+      Alert.alert(
+        'Требуется подписка',
+        'Оформите подписку, чтобы смотреть это видео.',
+        [{ text: 'Ок', onPress: () => navigation.replace('Paywall') }]
+      );
+    }
+  }, [active, id, navigation]);
+
   const onStatus = (st: any) => {
     if (!st?.isLoaded || !st.durationMillis) return;
-
     const p = Math.min(100, Math.round((st.positionMillis / st.durationMillis) * 100));
     setPercent(p);
 
-    // засчитываем один раз при финише или при достижении порога
     if (!completed && (st.didJustFinish || p / 100 >= minPercent)) {
       setCompleted(true);
-      markCompletedToday(id);   // локально отмечаем день
-      setShowDone(true);        // показываем карточку оценки
+      markCompletedToday(id);
+      setShowDone(true);
     }
   };
 
