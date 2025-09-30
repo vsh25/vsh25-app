@@ -128,8 +128,7 @@ export default function Home({ navigation }: any) {
       />
 
       <View style={styles.gap16} />
-      <UIButton title="Подписка" onPress={() => navigation.navigate('Paywall')} />
-
+      <UIButton title={t('paywall.title')} onPress={() => navigation.navigate('Paywall')} />
       <View style={styles.gap16} />
 
       <UIButton title="Тест-уведомление (10 сек)" onPress={testNotification10s} />
