@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
+// import * as Sentry from 'sentry-expo';
 
 import { SubscriptionProvider } from './app/subscription/Subscription';
-
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -19,22 +19,27 @@ import { SessionProvider, useSession } from './app/session/Session';
 import Login from './app/auth/Login';
 import Otp from './app/auth/Otp';
 
-// i18n — инициализация
+// i18n
 import './app/i18n';
 import { loadSavedLanguage } from './app/i18n/lang';
 
-// React Query — провайдер для хуков (например, useRateVideo)
+// React Query
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Paywall from './app/Paywall';
 
-// Уведомления: показывать даже в форграунде
+// ---------- Sentry (пока отключено) ----------
+// const SENTRY_DSN = '';
+// if (SENTRY_DSN) {
+//   Sentry.init({ dsn: SENTRY_DSN, enableInExpoDevelopment: true, debug: false, tracesSampleRate: 0.1 });
+// }
+// --------------------------------------------
+
+// Уведомления: поведение в форграунде (локальные уведомления ок в Expo Go)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    // iOS: показывать баннер и класть в список уведомлений
     shouldShowBanner: true,
     shouldShowList: true,
-    // общие флаги
     shouldPlaySound: false,
     shouldSetBadge: false,
   }),
@@ -44,9 +49,8 @@ const Stack = createNativeStackNavigator();
 
 function RootStacks() {
   const { token, initializing } = useSession();
-  if (initializing) return null; // можно показать splash
+  if (initializing) return null;
 
-  // Только стек; NavigationContainer теперь в корне App
   if (token) {
     return (
       <Stack.Navigator>
@@ -67,16 +71,6 @@ function RootStacks() {
 }
 
 export default function App() {
-  // Шрифты пока отключены, чтобы не падало на отсутствии файлов
-  // const [fontsLoaded] = useFonts({
-  //   'Rubik-Regular': require('./assets/fonts/Rubik-Regular.ttf'),
-  //   'Rubik-Medium': require('./assets/fonts/Rubik-Medium.ttf'),
-  //   'Rubik-SemiBold': require('./assets/fonts/Rubik-SemiBold.ttf'),
-  //   'Rubik-Bold': require('./assets/fonts/Rubik-Bold.ttf'),
-  // });
-  // if (!fontsLoaded) return null;
-
-  // Создаём один QueryClient на весь срок жизни приложения
   const queryClientRef = useRef<QueryClient>();
   if (!queryClientRef.current) {
     queryClientRef.current = new QueryClient({
@@ -104,15 +98,15 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClientRef.current}>
-  <SessionProvider>
-    <SubscriptionProvider>
-      <DailyProgressProvider>
-        <NavigationContainer>
-          <RootStacks />
-        </NavigationContainer>
-      </DailyProgressProvider>
-    </SubscriptionProvider>
-  </SessionProvider>
-</QueryClientProvider>
+      <SessionProvider>
+        <SubscriptionProvider>
+          <DailyProgressProvider>
+            <NavigationContainer>
+              <RootStacks />
+            </NavigationContainer>
+          </DailyProgressProvider>
+        </SubscriptionProvider>
+      </SessionProvider>
+    </QueryClientProvider>
   );
 }
