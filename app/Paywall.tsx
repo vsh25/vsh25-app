@@ -10,13 +10,13 @@ export default function Paywall({ navigation }: any) {
   const { t } = useTranslation();
 
   const buy = async () => {
-    await activate();                      // MOCK-покупка
+    await activate();
     Alert.alert(t('paywall.title'), t('paywall.activated'));
     navigation.goBack();
   };
 
   const restore = async () => {
-    await activate();                      // MOCK-восстановление
+    await activate();
     Alert.alert(t('paywall.title'), t('paywall.restored'));
     navigation.goBack();
   };
@@ -54,18 +54,15 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     backgroundColor: '#F1F5FF',
-    borderWidth: 1,
-    borderColor: theme.color.border,
+    borderWidth: 1, borderColor: theme.color.border,
     marginBottom: 16,
   },
   title: { fontSize: 22, fontWeight: '700', color: theme.color.text, marginBottom: 6 },
   caption: { color: theme.color.muted },
   card: {
-    padding: 16,
-    borderRadius: 16,
+    padding: 16, borderRadius: 16,
     backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: theme.color.border,
+    borderWidth: 1, borderColor: theme.color.border,
   },
   cardTitle: { fontWeight: '700', marginBottom: 8, color: theme.color.text },
   li: { marginTop: 4, color: theme.color.text },

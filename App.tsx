@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, LogBox } from 'react-native';
 // import * as Sentry from 'sentry-expo';
 
 import { SubscriptionProvider } from './app/subscription/Subscription';
@@ -13,7 +13,7 @@ import Profile from './app/Profile';
 import { DailyProgressProvider } from './app/DailyProgress';
 
 import * as Notifications from 'expo-notifications';
-// import { useFonts } from 'expo-font';
+import { useFonts } from 'expo-font';
 
 import { SessionProvider, useSession } from './app/session/Session';
 import Login from './app/auth/Login';
@@ -28,14 +28,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Paywall from './app/Paywall';
 
-// ---------- Sentry (пока отключено) ----------
-// const SENTRY_DSN = '';
-// if (SENTRY_DSN) {
-//   Sentry.init({ dsn: SENTRY_DSN, enableInExpoDevelopment: true, debug: false, tracesSampleRate: 0.1 });
-// }
-// --------------------------------------------
+// --- Dev: приглушаем сообщение expo-notifications в Expo Go ---
+LogBox.ignoreLogs([
+  /Android Push notifications \(remote notifications\) functionality provided by expo-notifications was removed from Expo Go/i,
+]);
 
-// Уведомления: поведение в форграунде (локальные уведомления ок в Expo Go)
+// Уведомления (локальные): показывать баннеры в форграунде
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -71,6 +69,17 @@ function RootStacks() {
 }
 
 export default function App() {
+  // ── Шрифты Rubik — внутри компонента ───────────────────────────────
+  const [fontsLoaded] = useFonts({
+    'Rubik-Regular': require('./assets/fonts/Rubik-Regular.ttf'),
+    'Rubik-Medium': require('./assets/fonts/Rubik-Medium.ttf'),
+    'Rubik-SemiBold': require('./assets/fonts/Rubik-SemiBold.ttf'),
+    'Rubik-Bold': require('./assets/fonts/Rubik-Bold.ttf'),
+  });
+  if (!fontsLoaded) return null;
+  // ──────────────────────────────────────────────────────────────────
+
+  // React Query client
   const queryClientRef = useRef<QueryClient>();
   if (!queryClientRef.current) {
     queryClientRef.current = new QueryClient({

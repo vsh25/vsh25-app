@@ -20,7 +20,7 @@ export default function Home({ navigation }: any) {
   const { bio, pill } = useDailyVideos();
   const { active } = useSubscription();
 
-  // блокировка разделов по флагам
+  // что закрыто по флагам (если подписки нет)
   const bioLocked  = isPaywalled('bio')  && !active;
   const pillLocked = isPaywalled('pill') && !active;
 
@@ -116,6 +116,7 @@ export default function Home({ navigation }: any) {
       <Card
         title={bio.title}
         subtitle={bioLocked ? '🔒 Требует подписку' : 'Ежедневная практика для активного долголетия'}
+        right={bioLocked ? <Text style={styles.lock}>🔒</Text> : null}
         onPress={() => (bioLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', bio))}
       />
 
@@ -124,13 +125,14 @@ export default function Home({ navigation }: any) {
       <Card
         title={pill.title}
         subtitle={pillLocked ? '🔒 Требует подписку' : 'Быстрый эффект, когда нет времени'}
+        right={pillLocked ? <Text style={styles.lock}>🔒</Text> : null}
         onPress={() => (pillLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', pill))}
       />
 
       <View style={styles.gap16} />
-      <UIButton title={t('paywall.title')} onPress={() => navigation.navigate('Paywall')} />
-      <View style={styles.gap16} />
+      <UIButton title={t('paywall.title', 'Подписка')} onPress={() => navigation.navigate('Paywall')} />
 
+      <View style={styles.gap16} />
       <UIButton title="Тест-уведомление (10 сек)" onPress={testNotification10s} />
       <View style={styles.gap12} />
       <UIButton title="Напоминание в 21:00" onPress={scheduleDaily2100} />
@@ -156,6 +158,7 @@ const styles = StyleSheet.create({
   container: { padding: 24, paddingBottom: 32 },
   title: { fontSize: 22, fontWeight: '600', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 8, marginBottom: 8 },
+  lock: { fontSize: 16, marginLeft: 8, color: '#64748B' },
   gap8: { height: 8 },
   gap12: { height: 12 },
   gap16: { height: 16 },
