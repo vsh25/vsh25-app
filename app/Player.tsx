@@ -1,5 +1,5 @@
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { useKeepAwake } from 'expo-keep-awake';
 import UIButton from './ui/Button';
@@ -28,22 +28,21 @@ export default function Player({ route, navigation }: { route: any; navigation: 
   const [percent, setPercent] = useState(0);
   const [completed, setCompleted] = useState<boolean>(isCompletedToday(id));
 
-  // оверлей «завершено» + рейтинг
+  // оверлеи
   const [showDone, setShowDone] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true); // ← скелетон до onReadyForDisplay
 
   useLayoutEffect(() => {
     navigation.setOptions({ title });
   }, [navigation, title]);
 
-  // защита: если раздел платный и подписки нет — уводим на Paywall
+  // защита paywall
   useEffect(() => {
     if (!active && isPaywalled(id)) {
-      Alert.alert(
-        'Требуется подписка',
-        'Оформите подписку, чтобы смотреть это видео.',
-        [{ text: 'Ок', onPress: () => navigation.replace('Paywall') }]
-      );
+      Alert.alert('Требуется подписка', 'Оформите подписку, чтобы смотреть это видео.', [
+        { text: 'Ок', onPress: () => navigation.replace('Paywall') },
+      ]);
     }
   }, [active, id, navigation]);
 
@@ -80,9 +79,19 @@ export default function Player({ route, navigation }: { route: any; navigation: 
         resizeMode={ResizeMode.CONTAIN}
         shouldPlay
         isLooping={false}
+        onLoadStart={() => setLoading(true)}
+        onReadyForDisplay={() => setLoading(false)}
         onPlaybackStatusUpdate={onStatus}
         onError={(e) => console.log('Video error', e)}
       />
+
+      {/* скелетон-оверлей до готовности видео */}
+      {loading && (
+        <View style={styles.loaderBackdrop}>
+          <ActivityIndicator size="large" color="#ffffff" />
+          <Text style={styles.loaderText}>Загрузка…</Text>
+        </View>
+      )}
 
       {/* маленький оверлей прогресса слева сверху */}
       <View style={styles.progress}>
@@ -128,6 +137,14 @@ export default function Player({ route, navigation }: { route: any; navigation: 
 }
 
 const styles = StyleSheet.create({
+  loaderBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  loaderText: { marginTop: 12, color: '#fff', fontWeight: '600' },
+
   progress: {
     position: 'absolute',
     left: 12,

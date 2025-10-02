@@ -3,6 +3,7 @@ import { ScrollView, View, Text, StyleSheet, Alert, Platform } from 'react-nativ
 import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 import KBCard from './ui/KBCard';
+import EmojiIcon from './ui/EmojiIcon';
 
 import LifeWidget from './ui/LifeWidget';
 import Card from './ui/Card';
@@ -112,20 +113,22 @@ export default function Home({ navigation }: any) {
       <LifeWidget />
 
       <Card
-        title={bio.title}
-        subtitle={bioLocked ? '🔒 Требует подписку' : 'Ежедневная практика для активного долголетия'}
-        right={bioLocked ? <Text style={styles.lock}>🔒</Text> : null}
-        onPress={() => (bioLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', bio))}
-      />
+  left={<EmojiIcon icon="🧬" />}
+  title={bio.title}
+  subtitle={bioLocked ? '🔒 Требует подписку' : 'Ежедневная практика для активного долголетия'}
+  right={bioLocked ? <Text style={styles.lock}>🔒</Text> : null}
+  onPress={() => (bioLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', bio))}
+/>
 
-      <View style={styles.gap12} />
+<View style={styles.gap12} />
 
-      <Card
-        title={pill.title}
-        subtitle={pillLocked ? '🔒 Требует подписку' : 'Быстрый эффект, когда нет времени'}
-        right={pillLocked ? <Text style={styles.lock}>🔒</Text> : null}
-        onPress={() => (pillLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', pill))}
-      />
+<Card
+  left={<EmojiIcon icon="💊" />}
+  title={pill.title}
+  subtitle={pillLocked ? '🔒 Требует подписку' : 'Быстрый эффект, когда нет времени'}
+  right={pillLocked ? <Text style={styles.lock}>🔒</Text> : null}
+  onPress={() => (pillLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', pill))}
+/>
 
       <View style={styles.gap16} />
       <UIButton
