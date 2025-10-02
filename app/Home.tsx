@@ -2,6 +2,7 @@ import React, { useLayoutEffect } from 'react';
 import { ScrollView, View, Text, StyleSheet, Alert, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
+import KBCard from './ui/KBCard';
 
 import LifeWidget from './ui/LifeWidget';
 import Card from './ui/Card';
@@ -144,7 +145,7 @@ export default function Home({ navigation }: any) {
       <Text style={styles.sectionTitle}>{t('kb.title', 'База знаний')}</Text>
 
       {articles.map((a) => (
-        <Card key={a.id} title={a.title} subtitle={a.tag} onPress={() => openArticle(a.url)} />
+        <KBCard key={a.id} title={a.title} tag={a.tag} onPress={() => openArticle(a.url)} />
       ))}
 
       <View style={styles.gap16} />
