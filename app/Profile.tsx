@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, Alert, Text } from 'react-native';
 import UIButton from './ui/Button';
 import { theme } from './theme';
 import * as Notifications from 'expo-notifications';
@@ -15,7 +15,9 @@ export default function Profile() {
   const { t } = useTranslation();
   const current = (i18n.language as 'ru' | 'en') || 'ru';
 
-  // — уведомления —
+  const [enabling, setEnabling] = useState(false);
+  const [disabling, setDisabling] = useState(false);
+
   const ensurePerms = async () => {
     let { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') ({ status } = await Notifications.requestPermissionsAsync());
@@ -27,23 +29,38 @@ export default function Profile() {
   };
 
   const enable21 = async () => {
-    if (!(await ensurePerms())) return;
-    await Notifications.cancelAllScheduledNotificationsAsync();
-    await Notifications.scheduleNotificationAsync({
-      content: { title: 'VSH25', body: 'Время биопрограммы. 10 минут — и день засчитан.' },
-      trigger: { hour: 21, minute: 0, repeats: true },
-    });
-    toast('Ежедневное напоминание в 21:00 включено');
+    if (enabling || disabling) return;
+    try {
+      setEnabling(true);
+      if (!(await ensurePerms())) return;
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      await Notifications.scheduleNotificationAsync({
+        content: { title: 'VSH25', body: 'Время биопрограммы. 10 минут — и день засчитан.' },
+        trigger: { hour: 21, minute: 0, repeats: true },
+      });
+      toast('Ежедневное напоминание в 21:00 включено');
+    } finally {
+      setEnabling(false);
+    }
   };
 
   const disableAll = async () => {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-    toast('Ежедневные напоминания отключены');
+    if (enabling || disabling) return;
+    try {
+      setDisabling(true);
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      toast('Ежедневные напоминания отключены');
+    } finally {
+      setDisabling(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      <H2>{t('profile.title', 'Профиль')}</H2>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={{ fontSize: 20 }}>👤</Text>
+        <H2 style={{ marginBottom: 0 }}>{t('profile.title', 'Профиль')}</H2>
+      </View>
 
       <Subtle style={{ marginBottom: 8 }}>
         {t('profile.language', 'Язык интерфейса')}
@@ -64,9 +81,22 @@ export default function Profile() {
 
       <View style={{ height: 20 }} />
 
-      <UIButton title={t('buttons.reminders', 'Напоминания 21:00')} onPress={enable21} fullWidth />
+      <UIButton
+        title={t('buttons.reminders', 'Напоминания 21:00')}
+        onPress={enable21}
+        loading={enabling}
+        disabled={disabling}
+        fullWidth
+      />
       <View style={{ height: 12 }} />
-      <UIButton title="Отключить напоминания" variant="outline" onPress={disableAll} fullWidth />
+      <UIButton
+        title="Отключить напоминания"
+        variant="outline"
+        onPress={disableAll}
+        loading={disabling}
+        disabled={enabling}
+        fullWidth
+      />
 
       <View style={{ height: 20 }} />
 
