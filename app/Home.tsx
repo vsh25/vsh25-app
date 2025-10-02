@@ -1,4 +1,4 @@
-import React, { useLayoutEffect } from 'react';
+import React, { useLayoutEffect, useRef, useCallback } from 'react';
 import { ScrollView, View, Text, StyleSheet, Alert, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
@@ -17,8 +17,11 @@ import { H2 } from './ui/Typography';
 import EmojiIcon from './ui/EmojiIcon';
 import KBCard from './ui/KBCard';
 import KBSkeleton from './ui/KBSkeleton';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function Home({ navigation }: any) {
+  const scrollRef = useRef<ScrollView>(null);
+
   const { isCompletedToday } = useDailyProgress();
   const { t } = useTranslation();
   const { bio, pill } = useDailyVideos();
@@ -26,6 +29,15 @@ export default function Home({ navigation }: any) {
 
   const bioLocked  = isPaywalled('bio')  && !active;
   const pillLocked = isPaywalled('pill') && !active;
+  const bioDone  = isCompletedToday('bio');
+  const pillDone = isCompletedToday('pill');
+
+  // скролл наверх при возвращении на экран (например, из Player)
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
 
   // уведомления
   const ensureNotifPerms = async () => {
@@ -108,11 +120,16 @@ export default function Home({ navigation }: any) {
     });
   }, [navigation, t]);
 
-  // мок-флаг загрузки для скелетона
   const kbLoading = false;
 
+  const DoneBadge = () => (
+    <View style={styles.doneBadge}>
+      <Text style={styles.doneBadgeText}>✓ Сегодня</Text>
+    </View>
+  );
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView ref={scrollRef} contentContainerStyle={styles.container}>
       {/* заголовок «Главная» с иконкой 🏠 */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Text style={{ fontSize: 20 }}>🏠</Text>
@@ -126,7 +143,9 @@ export default function Home({ navigation }: any) {
         left={<EmojiIcon icon="🧬" />}
         title={bio.title}
         subtitle={bioLocked ? '🔒 Требует подписку' : 'Ежедневная практика для активного долголетия'}
-        right={bioLocked ? <Text style={styles.lock}>🔒</Text> : null}
+        right={
+          bioLocked ? <Text style={styles.lock}>🔒</Text> : (bioDone ? <DoneBadge /> : null)
+        }
         onPress={() => (bioLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', bio))}
       />
 
@@ -137,7 +156,9 @@ export default function Home({ navigation }: any) {
         left={<EmojiIcon icon="💊" />}
         title={pill.title}
         subtitle={pillLocked ? '🔒 Требует подписку' : 'Быстрый эффект, когда нет времени'}
-        right={pillLocked ? <Text style={styles.lock}>🔒</Text> : null}
+        right={
+          pillLocked ? <Text style={styles.lock}>🔒</Text> : (pillDone ? <DoneBadge /> : null)
+        }
         onPress={() => (pillLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', pill))}
       />
 
@@ -190,8 +211,15 @@ export default function Home({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { padding: 24, paddingBottom: 32 },
   lock: { fontSize: 16, marginLeft: 8, color: '#64748B' },
+  doneBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#16A34A',
+    borderRadius: 999,
+  },
+  doneBadgeText: { color: '#fff', fontWeight: '700' },
   gap8: { height: 8 },
   gap12: { height: 12 },
-  sectionGap: { height: 20 },   // единый шаг между логическими секциями
+  sectionGap: { height: 20 },
   today: { color: '#64748B' },
 });
