@@ -27,7 +27,7 @@ export default function Home({ navigation }: any) {
   const bioLocked  = isPaywalled('bio')  && !active;
   const pillLocked = isPaywalled('pill') && !active;
 
-  // Включить/проверить права на уведомления
+  // уведомления
   const ensureNotifPerms = async () => {
     let { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') ({ status } = await Notifications.requestPermissionsAsync());
@@ -38,7 +38,6 @@ export default function Home({ navigation }: any) {
     return true;
   };
 
-  // Тест-уведомление
   const testNotification10s = async () => {
     const ok = await ensureNotifPerms();
     if (!ok) return;
@@ -56,7 +55,6 @@ export default function Home({ navigation }: any) {
     );
   };
 
-  // Ежедневное напоминание
   const scheduleDaily2100 = async () => {
     const ok = await ensureNotifPerms();
     if (!ok) return;
@@ -76,7 +74,7 @@ export default function Home({ navigation }: any) {
     Alert.alert('Отключено', 'Ежедневные напоминания удалены.');
   };
 
-  // Открытие статьи
+  // открыть статью
   const openArticle = async (url: string) => {
     try {
       const res = await fetch(url, { method: 'HEAD' });
@@ -84,7 +82,7 @@ export default function Home({ navigation }: any) {
         Alert.alert('Статья не найдена', 'Ссылка пока заглушка. Обновим позже.');
         return;
       }
-    } catch {/* ignore */}
+    } catch { /* ignore */ }
     await WebBrowser.openBrowserAsync(
       url,
       Platform.select({
@@ -95,7 +93,7 @@ export default function Home({ navigation }: any) {
     );
   };
 
-  // Кнопка «Профиль» в хедере
+  // кнопка «Профиль» в хедере
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
@@ -110,12 +108,16 @@ export default function Home({ navigation }: any) {
     });
   }, [navigation, t]);
 
-  // Флаг загрузки для «Базы знаний» (пока мок)
+  // мок-флаг загрузки для скелетона
   const kbLoading = false;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <H2>VSH25 — главная</H2>
+      {/* заголовок «Главная» с иконкой 🏠 */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={{ fontSize: 20 }}>🏠</Text>
+        <H2 style={{ marginBottom: 0 }}>VSH25 — главная</H2>
+      </View>
 
       <LifeWidget />
 
@@ -139,33 +141,29 @@ export default function Home({ navigation }: any) {
         onPress={() => (pillLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', pill))}
       />
 
-      <View style={styles.gap16} />
-
-      {/* CTA Подписка */}
+      {/* CTA: Подписка */}
+      <View style={styles.sectionGap} />
       <UIButton
         title={t('paywall.title', 'Подписка')}
         onPress={() => navigation.navigate('Paywall')}
         fullWidth
       />
 
-      <View style={styles.gap16} />
-
-      {/* Кнопки уведомлений */}
+      {/* блок уведомлений */}
+      <View style={styles.sectionGap} />
       <UIButton title="Тест-уведомление (10 сек)" onPress={testNotification10s} />
       <View style={styles.gap12} />
       <UIButton title="Напоминание в 21:00" onPress={scheduleDaily2100} />
       <View style={styles.gap8} />
       <UIButton title="Отключить напоминания" variant="outline" onPress={cancelDailyReminders} />
 
-      <View style={styles.gap16} />
-
-      {/* Заголовок секции «База знаний» с иконкой */}
+      {/* «База знаний» */}
+      <View style={styles.sectionGap} />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Text style={{ fontSize: 20 }}>📚</Text>
         <H2 style={{ marginBottom: 0 }}>{t('kb.title', 'База знаний')}</H2>
       </View>
 
-      {/* Скелетон или список статей */}
       {kbLoading ? (
         <KBSkeleton />
       ) : (
@@ -180,9 +178,8 @@ export default function Home({ navigation }: any) {
         ))
       )}
 
-      <View style={styles.gap16} />
-
-      {/* Статус за сегодня */}
+      {/* статус за сегодня */}
+      <View style={styles.sectionGap} />
       <Text style={styles.today}>
         За сегодня: Биопрограмма {isCompletedToday('bio') ? '✓' : '—'} · Таблетка {isCompletedToday('pill') ? '✓' : '—'}
       </Text>
@@ -195,6 +192,6 @@ const styles = StyleSheet.create({
   lock: { fontSize: 16, marginLeft: 8, color: '#64748B' },
   gap8: { height: 8 },
   gap12: { height: 12 },
-  gap16: { height: 16 },
-  today: { marginTop: 16, color: '#64748B' },
+  sectionGap: { height: 20 },   // единый шаг между логическими секциями
+  today: { color: '#64748B' },
 });
