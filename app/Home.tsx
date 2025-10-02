@@ -142,11 +142,12 @@ export default function Home({ navigation }: any) {
       <UIButton title="Отключить напоминания" variant="outline" onPress={cancelDailyReminders} />
 
       <View style={styles.gap16} />
-      <Text style={styles.sectionTitle}>{t('kb.title', 'База знаний')}</Text>
+      <H2>{t('kb.title', 'База знаний')}</H2>
+
 
       {articles.map((a) => (
-        <KBCard key={a.id} title={a.title} tag={a.tag} onPress={() => openArticle(a.url)} />
-      ))}
+        <KBCard key={a.id} title={a.title} tag={a.tag} icon={a.icon} onPress={() => openArticle(a.url)} />
+))}
 
       <View style={styles.gap16} />
       <Text style={styles.today}>
