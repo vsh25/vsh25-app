@@ -1,6 +1,5 @@
-// app/Profile.tsx
 import React from 'react';
-import { View, Text, StyleSheet, Alert, Platform } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import UIButton from './ui/Button';
 import { theme } from './theme';
 import * as Notifications from 'expo-notifications';
@@ -8,13 +7,14 @@ import { useSession } from './session/Session';
 import { useTranslation } from 'react-i18next';
 import i18n from './i18n';
 import { setLanguage } from './i18n/lang';
+import { H2, Subtle } from './ui/Typography';
 
 export default function Profile() {
   const { signOut } = useSession();
   const { t } = useTranslation();
-  const current = i18n.language as 'ru' | 'en';
+  const current = (i18n.language as 'ru' | 'en') || 'ru';
 
-  // --- уведомления ---
+  // — уведомления —
   const ensurePerms = async () => {
     let { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') ({ status } = await Notifications.requestPermissionsAsync());
@@ -29,46 +29,46 @@ export default function Profile() {
     if (!(await ensurePerms())) return;
     await Notifications.cancelAllScheduledNotificationsAsync();
     await Notifications.scheduleNotificationAsync({
-      content: { title: 'VSH25', body: t('reminders.body', 'Время биопрограммы. 10 минут — и день засчитан.') },
+      content: { title: 'VSH25', body: 'Время биопрограммы. 10 минут — и день засчитан.' },
       trigger: { hour: 21, minute: 0, repeats: true },
     });
-    const list = await Notifications.getAllScheduledNotificationsAsync();
-    Alert.alert('Готово', `Напоминание в 21:00 включено. Всего запланировано: ${list.length}.`);
+    Alert.alert('Готово', 'Ежедневное напоминание в 21:00 включено');
   };
 
   const disableAll = async () => {
     await Notifications.cancelAllScheduledNotificationsAsync();
-    Alert.alert('Отключено', 'Ежедневные напоминания удалены.');
+    Alert.alert('Отключено', 'Ежедневные напоминания удалены');
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t('profile.title', 'Профиль')}</Text>
+      <H2>{t('profile.title', 'Профиль')}</H2>
 
-      {/* Язык */}
-      <Text style={styles.sectionTitle}>{t('profile.language', 'Язык интерфейса')}</Text>
+      <Subtle style={{ marginBottom: 8 }}>
+        {t('profile.language', 'Язык интерфейса')}
+      </Subtle>
       <View style={styles.row}>
         <UIButton
           title={t('profile.ru', 'Русский')}
           variant={current === 'ru' ? 'primary' : 'outline'}
           onPress={() => setLanguage('ru')}
         />
+        <View style={{ width: 8 }} />
         <UIButton
           title={t('profile.en', 'English')}
           variant={current === 'en' ? 'primary' : 'outline'}
           onPress={() => setLanguage('en')}
-          style={{ marginLeft: 8 }}
         />
       </View>
 
-      {/* Напоминания */}
-      <View style={styles.spacer} />
+      <View style={{ height: 20 }} />
+
       <UIButton title={t('buttons.reminders', 'Напоминания 21:00')} onPress={enable21} fullWidth />
       <View style={{ height: 12 }} />
-      <UIButton title={t('reminders.turnOff', 'Отключить напоминания')} variant="outline" onPress={disableAll} fullWidth />
+      <UIButton title="Отключить напоминания" variant="outline" onPress={disableAll} fullWidth />
 
-      {/* Выход */}
-      <View style={styles.spacer} />
+      <View style={{ height: 20 }} />
+
       <UIButton title={t('auth.logout', 'Выйти')} variant="outline" onPress={signOut} fullWidth />
     </View>
   );
@@ -76,8 +76,5 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, backgroundColor: theme.color.bg },
-  title: { fontSize: 22, fontWeight: '600', marginBottom: 16, color: theme.color.text },
-  sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8, color: theme.color.muted },
-  row: { flexDirection: 'row' },
-  spacer: { height: 24 },
+  row: { flexDirection: 'row', alignItems: 'center' },
 });
