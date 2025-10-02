@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useCallback } from 'react';
+import React, { useLayoutEffect, useRef, useCallback, useState } from 'react';
 import { ScrollView, View, Text, StyleSheet, Alert, Platform, Pressable } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
@@ -33,10 +33,18 @@ export default function Home({ navigation }: any) {
   const bioDone  = isCompletedToday('bio');
   const pillDone = isCompletedToday('pill');
 
-  // скролл к началу экрана при возвращении
+  // лоадер на CTA «Подписка»
+  const [paywallLoading, setPaywallLoading] = useState(false);
+  const openPaywall = () => {
+    setPaywallLoading(true);
+    navigation.navigate('Paywall');
+  };
+
+  // скролл к началу при возврате + сброс лоадера CTA
   useFocusEffect(
     useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
+      setPaywallLoading(false);
     }, [])
   );
 
@@ -159,9 +167,14 @@ export default function Home({ navigation }: any) {
         onPress={() => (pillLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', pill))}
       />
 
-      {/* CTA: Подписка */}
+      {/* CTA: Подписка (с лоадером) */}
       <View style={styles.sectionGap} />
-      <UIButton title={t('paywall.title', 'Подписка')} onPress={() => navigation.navigate('Paywall')} fullWidth />
+      <UIButton
+        title={t('paywall.title', 'Подписка')}
+        onPress={openPaywall}
+        loading={paywallLoading}
+        fullWidth
+      />
 
       {/* блок уведомлений */}
       <View style={styles.sectionGap} />

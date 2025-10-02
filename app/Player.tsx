@@ -1,5 +1,5 @@
-import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
+import React, { useRef, useLayoutEffect, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { useKeepAwake } from 'expo-keep-awake';
 import UIButton from './ui/Button';
@@ -8,9 +8,9 @@ import { useRateVideo } from './services/hooks';
 import { useTranslation } from 'react-i18next';
 import { useSubscription } from './subscription/Subscription';
 import { isPaywalled } from './flags/gating';
+import { toast } from './ui/toast';
 
 type RouteParams = { id: 'bio' | 'pill'; title?: string; src: string; minPercent?: number };
-
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function Player({ route, navigation }: { route: any; navigation: any }) {
@@ -24,34 +24,37 @@ export default function Player({ route, navigation }: { route: any; navigation: 
   const rateVideo = useRateVideo();
   const { active } = useSubscription();
 
-  // прогресс
+  // soft-gate: если paywalled и нет подписки — даём 15с превью
+  const previewSec = !active && isPaywalled(id) ? 15 : null;
+
   const [percent, setPercent] = useState(0);
   const [completed, setCompleted] = useState<boolean>(isCompletedToday(id));
-
-  // оверлеи
   const [showDone, setShowDone] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true); // ← скелетон до onReadyForDisplay
+  const [loading, setLoading] = useState(true);
+  const [previewTriggered, setPreviewTriggered] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({ title });
   }, [navigation, title]);
 
-  // защита paywall
-  useEffect(() => {
-    if (!active && isPaywalled(id)) {
-      Alert.alert('Требуется подписка', 'Оформите подписку, чтобы смотреть это видео.', [
-        { text: 'Ок', onPress: () => navigation.replace('Paywall') },
-      ]);
-    }
-  }, [active, id, navigation]);
-
   const onStatus = (st: any) => {
     if (!st?.isLoaded || !st.durationMillis) return;
+
+    // превью: остановить на previewSec
+    if (previewSec && !previewTriggered && st.positionMillis >= previewSec * 1000) {
+      setPreviewTriggered(true);
+      videoRef.current?.pauseAsync().catch(() => {});
+      toast('Доступно 15 сек. превью. Оформите подписку, чтобы продолжить.');
+      navigation.replace('Paywall');
+      return;
+    }
+
     const p = Math.min(100, Math.round((st.positionMillis / st.durationMillis) * 100));
     setPercent(p);
 
-    if (!completed && (st.didJustFinish || p / 100 >= minPercent)) {
+    // засчитываем только если это не превью
+    if (!previewSec && !completed && (st.didJustFinish || p / 100 >= minPercent)) {
       setCompleted(true);
       markCompletedToday(id);
       setShowDone(true);
@@ -63,8 +66,7 @@ export default function Player({ route, navigation }: { route: any; navigation: 
       if (rating) setDayStatus(todayISO(), { rating });
       if (rating) await rateVideo.mutateAsync({ id, rating });
       navigation.goBack();
-    } catch (e: any) {
-      Alert.alert('Не удалось отправить оценку', e?.message ?? 'Попробуйте позже');
+    } catch {
       navigation.goBack();
     }
   };
@@ -82,7 +84,11 @@ export default function Player({ route, navigation }: { route: any; navigation: 
         onLoadStart={() => setLoading(true)}
         onReadyForDisplay={() => setLoading(false)}
         onPlaybackStatusUpdate={onStatus}
-        onError={(e) => console.log('Video error', e)}
+        onError={() => {
+          setLoading(false);
+          toast('Не удалось загрузить видео');
+          navigation.goBack();
+        }}
       />
 
       {/* скелетон-оверлей до готовности видео */}
@@ -96,19 +102,12 @@ export default function Player({ route, navigation }: { route: any; navigation: 
       {/* маленький оверлей прогресса слева сверху */}
       <View style={styles.progress}>
         <Text style={styles.progressText}>
-          {percent}% {completed ? `• ${t('player.completed', 'Засчитано')} ✓` : ''}
+          {percent}% {(!previewSec && completed) ? `• ${t('player.completed', 'Засчитано')} ✓` : ''}
         </Text>
       </View>
 
-      {/* бейдж "Засчитано" справа сверху */}
-      {completed && (
-        <View style={styles.completedBadge}>
-          <Text style={styles.completedText}>{t('player.completed', 'Засчитано')}</Text>
-        </View>
-      )}
-
-      {/* экран “Завершено” с оценкой */}
-      {showDone && (
+      {/* экран “Завершено” с оценкой (только не превью) */}
+      {!previewSec && showDone && (
         <View style={styles.doneBackdrop}>
           <View style={styles.doneCard}>
             <Text style={styles.doneTitle}>Сессия завершена</Text>
@@ -155,17 +154,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   progressText: { color: '#fff', fontWeight: '600' },
-
-  completedBadge: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#16A34A',
-    borderRadius: 999,
-  },
-  completedText: { color: '#fff', fontWeight: '700' },
 
   doneBackdrop: {
     ...StyleSheet.absoluteFillObject,
