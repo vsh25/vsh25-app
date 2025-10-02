@@ -5,7 +5,7 @@ import { theme } from '../theme';
 type Props = {
   title?: string;
   subtitle?: string;
-  left?: React.ReactNode;   // ← новый слот слева
+  left?: React.ReactNode;
   right?: React.ReactNode;
   children?: React.ReactNode;
   onPress?: () => void;
@@ -53,7 +53,14 @@ export default function Card({ title, subtitle, left, right, children, onPress, 
   if (!onPress) return Inner;
 
   return (
-    <Pressable onPress={onPress} android_ripple={{ color: '#00000014' }} style={{ borderRadius: theme.radius.l }}>
+    <Pressable
+      onPress={onPress}
+      android_ripple={{ color: '#00000014' }}
+      style={({ pressed }) => [
+        { borderRadius: theme.radius.l },
+        pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }, // iOS highlight
+      ]}
+    >
       {Inner}
     </Pressable>
   );

@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useCallback } from 'react';
-import { ScrollView, View, Text, StyleSheet, Alert, Platform } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, Alert, Platform, Pressable } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -21,6 +21,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 export default function Home({ navigation }: any) {
   const scrollRef = useRef<ScrollView>(null);
+  const kbAnchorY = useRef(0);
 
   const { isCompletedToday } = useDailyProgress();
   const { t } = useTranslation();
@@ -32,7 +33,7 @@ export default function Home({ navigation }: any) {
   const bioDone  = isCompletedToday('bio');
   const pillDone = isCompletedToday('pill');
 
-  // скролл наверх при возвращении на экран (например, из Player)
+  // скролл к началу экрана при возвращении
   useFocusEffect(
     useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -143,9 +144,7 @@ export default function Home({ navigation }: any) {
         left={<EmojiIcon icon="🧬" />}
         title={bio.title}
         subtitle={bioLocked ? '🔒 Требует подписку' : 'Ежедневная практика для активного долголетия'}
-        right={
-          bioLocked ? <Text style={styles.lock}>🔒</Text> : (bioDone ? <DoneBadge /> : null)
-        }
+        right={bioLocked ? <Text style={styles.lock}>🔒</Text> : (bioDone ? <DoneBadge /> : null)}
         onPress={() => (bioLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', bio))}
       />
 
@@ -156,19 +155,13 @@ export default function Home({ navigation }: any) {
         left={<EmojiIcon icon="💊" />}
         title={pill.title}
         subtitle={pillLocked ? '🔒 Требует подписку' : 'Быстрый эффект, когда нет времени'}
-        right={
-          pillLocked ? <Text style={styles.lock}>🔒</Text> : (pillDone ? <DoneBadge /> : null)
-        }
+        right={pillLocked ? <Text style={styles.lock}>🔒</Text> : (pillDone ? <DoneBadge /> : null)}
         onPress={() => (pillLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', pill))}
       />
 
       {/* CTA: Подписка */}
       <View style={styles.sectionGap} />
-      <UIButton
-        title={t('paywall.title', 'Подписка')}
-        onPress={() => navigation.navigate('Paywall')}
-        fullWidth
-      />
+      <UIButton title={t('paywall.title', 'Подписка')} onPress={() => navigation.navigate('Paywall')} fullWidth />
 
       {/* блок уведомлений */}
       <View style={styles.sectionGap} />
@@ -178,12 +171,19 @@ export default function Home({ navigation }: any) {
       <View style={styles.gap8} />
       <UIButton title="Отключить напоминания" variant="outline" onPress={cancelDailyReminders} />
 
-      {/* «База знаний» */}
+      {/* маркер начала секции KB для скролла */}
+      <View onLayout={(e) => { kbAnchorY.current = e.nativeEvent.layout.y; }} />
+
+      {/* «База знаний» (тап по заголовку — скролл к якорю) */}
       <View style={styles.sectionGap} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Pressable
+        onPress={() => scrollRef.current?.scrollTo({ y: kbAnchorY.current, animated: true })}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+        hitSlop={8}
+      >
         <Text style={{ fontSize: 20 }}>📚</Text>
         <H2 style={{ marginBottom: 0 }}>{t('kb.title', 'База знаний')}</H2>
-      </View>
+      </Pressable>
 
       {kbLoading ? (
         <KBSkeleton />
