@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from './i18n';
 import { setLanguage } from './i18n/lang';
 import { H2, Subtle } from './ui/Typography';
+import { toast } from './ui/toast';
 
 export default function Profile() {
   const { signOut } = useSession();
@@ -32,12 +33,12 @@ export default function Profile() {
       content: { title: 'VSH25', body: 'Время биопрограммы. 10 минут — и день засчитан.' },
       trigger: { hour: 21, minute: 0, repeats: true },
     });
-    Alert.alert('Готово', 'Ежедневное напоминание в 21:00 включено');
+    toast('Ежедневное напоминание в 21:00 включено');
   };
 
   const disableAll = async () => {
     await Notifications.cancelAllScheduledNotificationsAsync();
-    Alert.alert('Отключено', 'Ежедневные напоминания удалены');
+    toast('Ежедневные напоминания отключены');
   };
 
   return (
