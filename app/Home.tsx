@@ -13,6 +13,7 @@ import { useDailyVideos } from './hooks/useDailyVideos';
 
 import { useSubscription } from './subscription/Subscription';
 import { isPaywalled } from './flags/gating';
+import { H2 } from './ui/Typography'; // ← ОСТАВЛЯЕМ ТОЛЬКО ЭТОТ ИМПОРТ
 
 export default function Home({ navigation }: any) {
   const { isCompletedToday } = useDailyProgress();
@@ -20,12 +21,10 @@ export default function Home({ navigation }: any) {
   const { bio, pill } = useDailyVideos();
   const { active } = useSubscription();
 
-  // что закрыто по флагам (если подписки нет)
   const bioLocked  = isPaywalled('bio')  && !active;
   const pillLocked = isPaywalled('pill') && !active;
 
   // --- Уведомления ---
-
   const ensureNotifPerms = async () => {
     let { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') ({ status } = await Notifications.requestPermissionsAsync());
@@ -79,9 +78,7 @@ export default function Home({ navigation }: any) {
         Alert.alert('Статья не найдена', 'Ссылка пока заглушка. Обновим позже.');
         return;
       }
-    } catch {
-      // если HEAD недоступен — всё равно попробуем открыть
-    }
+    } catch {/* ignore */}
     await WebBrowser.openBrowserAsync(
       url,
       Platform.select({
@@ -109,7 +106,7 @@ export default function Home({ navigation }: any) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>VSH25 — главная</Text>
+      <H2>VSH25 — главная</H2>
 
       <LifeWidget />
 
@@ -130,7 +127,11 @@ export default function Home({ navigation }: any) {
       />
 
       <View style={styles.gap16} />
-      <UIButton title={t('paywall.title', 'Подписка')} onPress={() => navigation.navigate('Paywall')} />
+      <UIButton
+        title={t('paywall.title', 'Подписка')}
+        onPress={() => navigation.navigate('Paywall')}
+        fullWidth
+      />
 
       <View style={styles.gap16} />
       <UIButton title="Тест-уведомление (10 сек)" onPress={testNotification10s} />
@@ -156,7 +157,6 @@ export default function Home({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { padding: 24, paddingBottom: 32 },
-  title: { fontSize: 22, fontWeight: '600', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 8, marginBottom: 8 },
   lock: { fontSize: 16, marginLeft: 8, color: '#64748B' },
   gap8: { height: 8 },
