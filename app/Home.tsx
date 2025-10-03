@@ -1,5 +1,5 @@
-import React, { useLayoutEffect, useRef, useCallback, useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, Alert, Platform, Pressable } from 'react-native';
+import React, { useLayoutEffect, useRef, useCallback, useState, useEffect } from 'react';
+import { ScrollView, View, Text, StyleSheet, Alert, Platform, Pressable, RefreshControl } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -12,12 +12,13 @@ import { articles } from './content/articles';
 import { useDailyVideos } from './hooks/useDailyVideos';
 
 import { useSubscription } from './subscription/Subscription';
-import { isPaywalled } from './flags/gating';
+import { useGating } from './flags/gating';
 import { H2 } from './ui/Typography';
 import EmojiIcon from './ui/EmojiIcon';
 import KBCard from './ui/KBCard';
 import KBSkeleton from './ui/KBSkeleton';
 import { useFocusEffect } from '@react-navigation/native';
+import { toast } from './ui/toast';
 
 export default function Home({ navigation }: any) {
   const scrollRef = useRef<ScrollView>(null);
@@ -27,26 +28,49 @@ export default function Home({ navigation }: any) {
   const { t } = useTranslation();
   const { bio, pill } = useDailyVideos();
   const { active } = useSubscription();
+  const { isPaywalled } = useGating();
 
   const bioLocked  = isPaywalled('bio')  && !active;
   const pillLocked = isPaywalled('pill') && !active;
   const bioDone  = isCompletedToday('bio');
   const pillDone = isCompletedToday('pill');
 
-  // лоадер на CTA «Подписка»
+  // CTA «Подписка» — лоадер
   const [paywallLoading, setPaywallLoading] = useState(false);
   const openPaywall = () => {
     setPaywallLoading(true);
     navigation.navigate('Paywall');
   };
 
-  // скролл к началу при возврате + сброс лоадера CTA
+  // pull-to-refresh + скелетон для KB
+  const [kbLoading, setKbLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = () => {
+    setRefreshing(true);
+    setKbLoading(true);
+    setTimeout(() => {
+      setKbLoading(false);
+      setRefreshing(false);
+      toast('Список обновлён');
+    }, 800);
+  };
+
+  // при возврате: скролл к началу + снять лоадер CTA
   useFocusEffect(
     useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
       setPaywallLoading(false);
     }, [])
   );
+
+  // toast при активации подписки (переход false -> true)
+  const prevActive = useRef(active);
+  useEffect(() => {
+    if (prevActive.current === false && active === true) {
+      toast('Подписка активирована');
+    }
+    prevActive.current = active;
+  }, [active]);
 
   // уведомления
   const ensureNotifPerms = async () => {
@@ -129,8 +153,6 @@ export default function Home({ navigation }: any) {
     });
   }, [navigation, t]);
 
-  const kbLoading = false;
-
   const DoneBadge = () => (
     <View style={styles.doneBadge}>
       <Text style={styles.doneBadgeText}>✓ Сегодня</Text>
@@ -138,7 +160,13 @@ export default function Home({ navigation }: any) {
   );
 
   return (
-    <ScrollView ref={scrollRef} contentContainerStyle={styles.container}>
+    <ScrollView
+      ref={scrollRef}
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2B7EEB" />
+      }
+    >
       {/* заголовок «Главная» с иконкой 🏠 */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Text style={{ fontSize: 20 }}>🏠</Text>
