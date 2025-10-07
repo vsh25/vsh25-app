@@ -19,6 +19,7 @@ import KBCard from './ui/KBCard';
 import KBSkeleton from './ui/KBSkeleton';
 import { useFocusEffect } from '@react-navigation/native';
 import { toast } from './ui/toast';
+import HomeHero from './ui/HomeHero'; // ← добавили
 
 export default function Home({ navigation }: any) {
   const scrollRef = useRef<ScrollView>(null);
@@ -28,14 +29,14 @@ export default function Home({ navigation }: any) {
   const { t } = useTranslation();
   const { bio, pill } = useDailyVideos();
   const { active } = useSubscription();
-  const { isPaywalled } = useGating();
+  const gating = useGating();
 
-  const bioLocked  = isPaywalled('bio')  && !active;
-  const pillLocked = isPaywalled('pill') && !active;
+  const bioLocked  = gating.isPaywalled('bio')  && !active;
+  const pillLocked = gating.isPaywalled('pill') && !active;
   const bioDone  = isCompletedToday('bio');
   const pillDone = isCompletedToday('pill');
 
-  // CTA «Подписка» — лоадер
+  // CTA «Подписка»
   const [paywallLoading, setPaywallLoading] = useState(false);
   const openPaywall = () => {
     setPaywallLoading(true);
@@ -72,7 +73,14 @@ export default function Home({ navigation }: any) {
     prevActive.current = active;
   }, [active]);
 
-  // уведомления
+  // toast при изменении гейтинга
+  const firstGating = useRef(true);
+  useEffect(() => {
+    if (firstGating.current) { firstGating.current = false; return; }
+    toast('Настройки доступа обновлены');
+  }, [gating.mode.bio, gating.mode.pill, gating.mode.kb]);
+
+  // уведомления …
   const ensureNotifPerms = async () => {
     let { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') ({ status } = await Notifications.requestPermissionsAsync());
@@ -82,60 +90,25 @@ export default function Home({ navigation }: any) {
     }
     return true;
   };
-
-  const testNotification10s = async () => {
-    const ok = await ensureNotifPerms();
-    if (!ok) return;
-
-    await Notifications.scheduleNotificationAsync({
-      content: { title: 'VSH25', body: 'Тестовое уведомление' },
-      trigger: { seconds: 10 },
-    });
-
-    Alert.alert(
-      'Запланировано',
-      Platform.OS === 'android'
-        ? 'Придёт через ~10 сек. Сверни приложение или погаси экран, чтобы увидеть баннер.'
-        : 'Придёт через ~10 сек.'
-    );
+  const testNotification10s = async () => { /* как было */ 
+    const ok = await ensureNotifPerms(); if (!ok) return;
+    await Notifications.scheduleNotificationAsync({ content: { title: 'VSH25', body: 'Тестовое уведомление' }, trigger: { seconds: 10 } });
+    Alert.alert('Запланировано', Platform.OS === 'android' ? 'Придёт через ~10 сек. Сверни приложение…' : 'Придёт через ~10 сек.');
   };
-
-  const scheduleDaily2100 = async () => {
-    const ok = await ensureNotifPerms();
-    if (!ok) return;
-
+  const scheduleDaily2100 = async () => { /* как было */ 
+    const ok = await ensureNotifPerms(); if (!ok) return;
     await Notifications.cancelAllScheduledNotificationsAsync();
-    await Notifications.scheduleNotificationAsync({
-      content: { title: 'VSH25', body: 'Время биопрограммы. 10 минут — и день засчитан.' },
-      trigger: { hour: 21, minute: 0, repeats: true },
-    });
-
+    await Notifications.scheduleNotificationAsync({ content: { title: 'VSH25', body: 'Время биопрограммы. 10 минут — и день засчитан.' }, trigger: { hour: 21, minute: 0, repeats: true } });
     const list = await Notifications.getAllScheduledNotificationsAsync();
     Alert.alert('Готово', `Напоминание в 21:00 включено. Всего запланировано: ${list.length}.`);
   };
+  const cancelDailyReminders = async () => { await Notifications.cancelAllScheduledNotificationsAsync(); Alert.alert('Отключено', 'Ежедневные напоминания удалены.'); };
 
-  const cancelDailyReminders = async () => {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-    Alert.alert('Отключено', 'Ежедневные напоминания удалены.');
-  };
-
-  // открыть статью
+  // открыть статью …
   const openArticle = async (url: string) => {
-    try {
-      const res = await fetch(url, { method: 'HEAD' });
-      if (!res.ok) {
-        Alert.alert('Статья не найдена', 'Ссылка пока заглушка. Обновим позже.');
-        return;
-      }
-    } catch { /* ignore */ }
-    await WebBrowser.openBrowserAsync(
-      url,
-      Platform.select({
-        ios:    { preferredBarTintColor: '#2B7EEB', preferredControlTintColor: '#FFFFFF' },
-        android:{ toolbarColor: '#2B7EEB', showTitle: true },
-        default: {},
-      })
-    );
+    try { const res = await fetch(url, { method: 'HEAD' }); if (!res.ok) { Alert.alert('Статья не найдена', 'Ссылка пока заглушка.'); return; } }
+    catch {}
+    await WebBrowser.openBrowserAsync(url, Platform.select({ ios: { preferredBarTintColor: '#2B7EEB', preferredControlTintColor: '#FFFFFF' }, android: { toolbarColor: '#2B7EEB', showTitle: true }, default: {} }));
   };
 
   // кнопка «Профиль» в хедере
@@ -159,19 +132,27 @@ export default function Home({ navigation }: any) {
     </View>
   );
 
+  // перейти сразу в Bio
+  const goBio = () => {
+    if (bioLocked) return navigation.navigate('Paywall');
+    navigation.navigate('Player', bio);
+  };
+
   return (
     <ScrollView
       ref={scrollRef}
       contentContainerStyle={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2B7EEB" />
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2B7EEB" />}
     >
-      {/* заголовок «Главная» с иконкой 🏠 */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Text style={{ fontSize: 20 }}>🏠</Text>
-        <H2 style={{ marginBottom: 0 }}>VSH25 — главная</H2>
-      </View>
+      {/* HERO по Luma */}
+      <HomeHero
+        title="VSH25 — продление жизни"
+        subtitle="Ежедневные короткие практики: Биопрограмма и Цифровая таблетка"
+        onPrimary={goBio}
+        onSecondary={openPaywall}
+        primaryText={bioLocked ? 'Оформить подписку' : 'Смотреть Биопрограмму'}
+        secondaryText="Подписка"
+      />
 
       <LifeWidget />
 
@@ -181,7 +162,7 @@ export default function Home({ navigation }: any) {
         title={bio.title}
         subtitle={bioLocked ? '🔒 Требует подписку' : 'Ежедневная практика для активного долголетия'}
         right={bioLocked ? <Text style={styles.lock}>🔒</Text> : (bioDone ? <DoneBadge /> : null)}
-        onPress={() => (bioLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', bio))}
+        onPress={goBio}
       />
 
       <View style={styles.gap12} />
@@ -197,12 +178,7 @@ export default function Home({ navigation }: any) {
 
       {/* CTA: Подписка (с лоадером) */}
       <View style={styles.sectionGap} />
-      <UIButton
-        title={t('paywall.title', 'Подписка')}
-        onPress={openPaywall}
-        loading={paywallLoading}
-        fullWidth
-      />
+      <UIButton title={t('paywall.title', 'Подписка')} onPress={openPaywall} loading={paywallLoading} fullWidth />
 
       {/* блок уведомлений */}
       <View style={styles.sectionGap} />
@@ -215,7 +191,7 @@ export default function Home({ navigation }: any) {
       {/* маркер начала секции KB для скролла */}
       <View onLayout={(e) => { kbAnchorY.current = e.nativeEvent.layout.y; }} />
 
-      {/* «База знаний» (тап по заголовку — скролл к якорю) */}
+      {/* «База знаний» */}
       <View style={styles.sectionGap} />
       <Pressable
         onPress={() => scrollRef.current?.scrollTo({ y: kbAnchorY.current, animated: true })}
@@ -230,13 +206,7 @@ export default function Home({ navigation }: any) {
         <KBSkeleton />
       ) : (
         articles.map((a) => (
-          <KBCard
-            key={a.id}
-            title={a.title}
-            tag={a.tag}
-            icon={a.icon}
-            onPress={() => openArticle(a.url)}
-          />
+          <KBCard key={a.id} title={a.title} tag={a.tag} icon={a.icon} onPress={() => openArticle(a.url)} />
         ))
       )}
 
