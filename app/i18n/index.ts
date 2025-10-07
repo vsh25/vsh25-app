@@ -11,6 +11,14 @@ const resources = {
       buttons: { profile: 'Профиль', reminders: 'Напоминания' },
       kb: { title: 'База знаний' },
 
+      // Виджет «Продление жизни»
+      life: {
+        title: 'Продление жизни',
+        done: 'Выполнено сегодня',
+        bio: 'Биопрограмма',
+        pill: 'Таблетка',
+      },
+
       paywall: {
         title: 'Подписка',
         heroTitle: 'Подписка VSH25',
@@ -23,9 +31,9 @@ const resources = {
         restore: 'Восстановить покупку',
         mockOff: 'Отключить подписку (MOCK)',
         activated: 'Подписка активирована',
-        restored: 'Подписка восстановлена'
-      }
-    }
+        restored: 'Подписка восстановлена',
+      },
+    },
   },
   en: {
     translation: {
@@ -35,6 +43,14 @@ const resources = {
       profile: { title: 'Profile', language: 'Interface language', ru: 'Russian', en: 'English' },
       buttons: { profile: 'Profile', reminders: 'Reminders' },
       kb: { title: 'Knowledge base' },
+
+      // Life widget
+      life: {
+        title: 'Life extension',
+        done: 'Completed today',
+        bio: 'Bio-program',
+        pill: 'Digital Pill',
+      },
 
       paywall: {
         title: 'Subscription',
@@ -48,17 +64,17 @@ const resources = {
         restore: 'Restore purchase',
         mockOff: 'Disable subscription (MOCK)',
         activated: 'Subscription activated',
-        restored: 'Subscription restored'
-      }
-    }
-  }
+        restored: 'Subscription restored',
+      },
+    },
+  },
 };
 
 i18n.use(initReactI18next).init({
   resources,
   lng: 'ru',
   fallbackLng: 'ru',
-  interpolation: { escapeValue: false }
+  interpolation: { escapeValue: false },
 });
 
 export default i18n;

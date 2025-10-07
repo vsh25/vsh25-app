@@ -95,12 +95,17 @@ export default function Home({ navigation }: any) {
     await Notifications.scheduleNotificationAsync({ content: { title: 'VSH25', body: 'Тестовое уведомление' }, trigger: { seconds: 10 } });
     Alert.alert('Запланировано', Platform.OS === 'android' ? 'Придёт через ~10 сек. Сверни приложение…' : 'Придёт через ~10 сек.');
   };
-  const scheduleDaily2100 = async () => { /* как было */ 
-    const ok = await ensureNotifPerms(); if (!ok) return;
+  const scheduleDaily2100 = async () => {
+    const ok = await ensureNotifPerms();
+    if (!ok) return;
+  
     await Notifications.cancelAllScheduledNotificationsAsync();
-    await Notifications.scheduleNotificationAsync({ content: { title: 'VSH25', body: 'Время биопрограммы. 10 минут — и день засчитан.' }, trigger: { hour: 21, minute: 0, repeats: true } });
-    const list = await Notifications.getAllScheduledNotificationsAsync();
-    Alert.alert('Готово', `Напоминание в 21:00 включено. Всего запланировано: ${list.length}.`);
+    await Notifications.scheduleNotificationAsync({
+      content: { title: 'VSH25', body: 'Время биопрограммы. 10 минут — и день засчитан.' },
+      trigger: { hour: 21, minute: 0, repeats: true },
+    });
+  
+    Alert.alert('Готово', 'Ежедневное напоминание в 21:00 включено.');
   };
   const cancelDailyReminders = async () => { await Notifications.cancelAllScheduledNotificationsAsync(); Alert.alert('Отключено', 'Ежедневные напоминания удалены.'); };
 

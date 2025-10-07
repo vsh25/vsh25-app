@@ -9,11 +9,17 @@ import i18n from './i18n';
 import { setLanguage } from './i18n/lang';
 import { H2, Subtle } from './ui/Typography';
 import { toast } from './ui/toast';
+import { useGating } from './flags/gating';
 
 export default function Profile() {
   const { signOut } = useSession();
   const { t } = useTranslation();
   const current = (i18n.language as 'ru' | 'en') || 'ru';
+
+  const { mode, setMode } = useGating();
+  const bioIsPay = mode.bio === 'pay';
+  const pillIsPay = mode.pill === 'pay';
+  const kbIsPay  = mode.kb  === 'pay';
 
   const [enabling, setEnabling] = useState(false);
   const [disabling, setDisabling] = useState(false);
@@ -22,7 +28,11 @@ export default function Profile() {
     let { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') ({ status } = await Notifications.requestPermissionsAsync());
     if (status !== 'granted') {
-      Alert.alert('Уведомления выключены', 'Разрешите уведомления в настройках системы.');
+      Alert.alert(
+        'Уведомления выключены',
+        'Разрешите уведомления в настройках системы.',
+        [{ text: 'Ок' }]
+      );
       return false;
     }
     return true;
@@ -57,11 +67,13 @@ export default function Profile() {
 
   return (
     <View style={styles.container}>
+      {/* Заголовок */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Text style={{ fontSize: 20 }}>👤</Text>
         <H2 style={{ marginBottom: 0 }}>{t('profile.title', 'Профиль')}</H2>
       </View>
 
+      {/* Язык */}
       <Subtle style={{ marginBottom: 8 }}>
         {t('profile.language', 'Язык интерфейса')}
       </Subtle>
@@ -79,8 +91,33 @@ export default function Profile() {
         />
       </View>
 
+      {/* Доступ к контенту (гейтинг) */}
       <View style={{ height: 20 }} />
+      <Subtle style={{ marginBottom: 8 }}>Доступ к контенту</Subtle>
 
+      <UIButton
+        title={bioIsPay ? 'Биопрограмма: платно → сделать бесплатно' : 'Биопрограмма: бесплатно → сделать платно'}
+        variant={bioIsPay ? 'outline' : 'primary'}
+        onPress={() => setMode('bio', bioIsPay ? 'free' : 'pay')}
+        fullWidth
+      />
+      <View style={{ height: 8 }} />
+      <UIButton
+        title={pillIsPay ? 'Таблетка: платно → сделать бесплатно' : 'Таблетка: бесплатно → сделать платно'}
+        variant={pillIsPay ? 'outline' : 'primary'}
+        onPress={() => setMode('pill', pillIsPay ? 'free' : 'pay')}
+        fullWidth
+      />
+      <View style={{ height: 8 }} />
+      <UIButton
+        title={kbIsPay ? 'База знаний: платно → сделать бесплатно' : 'База знаний: бесплатно → сделать платно'}
+        variant={kbIsPay ? 'outline' : 'primary'}
+        onPress={() => setMode('kb', kbIsPay ? 'free' : 'pay')}
+        fullWidth
+      />
+
+      {/* Напоминания */}
+      <View style={{ height: 20 }} />
       <UIButton
         title={t('buttons.reminders', 'Напоминания 21:00')}
         onPress={enable21}
@@ -98,8 +135,8 @@ export default function Profile() {
         fullWidth
       />
 
+      {/* Выход */}
       <View style={{ height: 20 }} />
-
       <UIButton title={t('auth.logout', 'Выйти')} variant="outline" onPress={signOut} fullWidth />
     </View>
   );

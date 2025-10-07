@@ -4,6 +4,7 @@
     "slug": "vsh25-app",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "vsh25",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -13,7 +14,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "net.vsh25.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -27,9 +29,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store",
-      "sentry-expo",
-      "expo-font"
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

@@ -1,13 +1,14 @@
 import React, { useRef, useLayoutEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
+import * as WebBrowser from 'expo-web-browser';
 import { useKeepAwake } from 'expo-keep-awake';
 import UIButton from './ui/Button';
 import { useDailyProgress } from './DailyProgress';
 import { useRateVideo } from './services/hooks';
 import { useTranslation } from 'react-i18next';
 import { useSubscription } from './subscription/Subscription';
-import { isPaywalled } from './flags/gating';
+import { useGating } from './flags/gating';
 import { toast } from './ui/toast';
 
 type RouteParams = { id: 'bio' | 'pill'; title?: string; src: string; minPercent?: number };
@@ -16,6 +17,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 export default function Player({ route, navigation }: { route: any; navigation: any }) {
   const { id, title = 'Player', src, minPercent = 0.9 } = (route?.params || {}) as RouteParams;
   const videoRef = useRef<Video>(null);
+  const [videoKey, setVideoKey] = useState(0);
 
   useKeepAwake();
 
@@ -23,8 +25,8 @@ export default function Player({ route, navigation }: { route: any; navigation: 
   const { markCompletedToday, setDayStatus, isCompletedToday } = useDailyProgress();
   const rateVideo = useRateVideo();
   const { active } = useSubscription();
+  const { isPaywalled } = useGating();
 
-  // soft-gate: если paywalled и нет подписки — даём 15с превью
   const previewSec = !active && isPaywalled(id) ? 15 : null;
 
   const [percent, setPercent] = useState(0);
@@ -32,7 +34,7 @@ export default function Player({ route, navigation }: { route: any; navigation: 
   const [showDone, setShowDone] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [previewTriggered, setPreviewTriggered] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({ title });
@@ -41,11 +43,9 @@ export default function Player({ route, navigation }: { route: any; navigation: 
   const onStatus = (st: any) => {
     if (!st?.isLoaded || !st.durationMillis) return;
 
-    // превью: остановить на previewSec
-    if (previewSec && !previewTriggered && st.positionMillis >= previewSec * 1000) {
-      setPreviewTriggered(true);
+    if (previewSec && st.positionMillis >= previewSec * 1000) {
       videoRef.current?.pauseAsync().catch(() => {});
-      toast('Доступно 15 сек. превью. Оформите подписку, чтобы продолжить.');
+      toast('Превью 15 c. Оформите подписку, чтобы смотреть дальше.');
       navigation.replace('Paywall');
       return;
     }
@@ -53,7 +53,6 @@ export default function Player({ route, navigation }: { route: any; navigation: 
     const p = Math.min(100, Math.round((st.positionMillis / st.durationMillis) * 100));
     setPercent(p);
 
-    // засчитываем только если это не превью
     if (!previewSec && !completed && (st.didJustFinish || p / 100 >= minPercent)) {
       setCompleted(true);
       markCompletedToday(id);
@@ -71,9 +70,22 @@ export default function Player({ route, navigation }: { route: any; navigation: 
     }
   };
 
+  const retry = () => {
+    setErrorText(null);
+    setLoading(true);
+    setVideoKey(k => k + 1); // пересоздаём Video
+  };
+
+  const openExternal = async () => {
+    try {
+      await WebBrowser.openBrowserAsync(src);
+    } catch {}
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: 'black' }}>
       <Video
+        key={videoKey}
         ref={videoRef}
         source={{ uri: src }}
         style={{ flex: 1 }}
@@ -81,32 +93,44 @@ export default function Player({ route, navigation }: { route: any; navigation: 
         resizeMode={ResizeMode.CONTAIN}
         shouldPlay
         isLooping={false}
-        onLoadStart={() => setLoading(true)}
+        onLoadStart={() => { setLoading(true); setErrorText(null); }}
         onReadyForDisplay={() => setLoading(false)}
         onPlaybackStatusUpdate={onStatus}
-        onError={() => {
+        onError={(e) => {
           setLoading(false);
-          toast('Не удалось загрузить видео');
-          navigation.goBack();
+          const msg = (e?.error?.message || e?.error?.toString?.() || 'Не удалось загрузить видео');
+          setErrorText(msg);
+          console.log('Video error:', e);
         }}
       />
 
-      {/* скелетон-оверлей до готовности видео */}
-      {loading && (
+      {/* лоадер */}
+      {loading && !errorText && (
         <View style={styles.loaderBackdrop}>
           <ActivityIndicator size="large" color="#ffffff" />
           <Text style={styles.loaderText}>Загрузка…</Text>
         </View>
       )}
 
-      {/* маленький оверлей прогресса слева сверху */}
+      {/* ошибка + действия */}
+      {!!errorText && (
+        <View style={styles.loaderBackdrop}>
+          <Text style={[styles.loaderText, { marginBottom: 12 }]}>{errorText}</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <UIButton title="Повторить" onPress={retry} />
+            <UIButton title="Открыть в браузере" variant="outline" onPress={openExternal} />
+          </View>
+        </View>
+      )}
+
+      {/* прогресс */}
       <View style={styles.progress}>
         <Text style={styles.progressText}>
           {percent}% {(!previewSec && completed) ? `• ${t('player.completed', 'Засчитано')} ✓` : ''}
         </Text>
       </View>
 
-      {/* экран “Завершено” с оценкой (только не превью) */}
+      {/* завершено */}
       {!previewSec && showDone && (
         <View style={styles.doneBackdrop}>
           <View style={styles.doneCard}>
@@ -141,8 +165,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.35)',
+    padding: 24,
   },
-  loaderText: { marginTop: 12, color: '#fff', fontWeight: '600' },
+  loaderText: { marginTop: 12, color: '#fff', fontWeight: '600', textAlign: 'center' },
 
   progress: {
     position: 'absolute',

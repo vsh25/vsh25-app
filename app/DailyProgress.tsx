@@ -1,133 +1,98 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  ReactNode,
-} from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
 
-/**
- * Статус дня: что выполнено и оценка (если была)
- */
-export type DayStatus = {
-  bio?: boolean;      // Биопрограмма выполнена
-  pill?: boolean;     // Таблетка выполнена
-  rating?: number;    // 1..5 (опционально)
+type VideoId = 'bio' | 'pill';
+type DayISO = string; // 'YYYY-MM-DD'
+type DayStatus = {
+  bio?: boolean;  // true = просмотр засчитан
+  pill?: boolean; // true = просмотр засчитан
+  rating?: number; // оценка сессии (если есть)
 };
-
-/**
- * История: ключ — YYYY-MM-DD, значение — DayStatus
- * Пример: { "2025-09-10": { bio: true, pill: false, rating: 4 } }
- */
-type HistoryMap = Record<string, DayStatus>;
 
 type Ctx = {
-  // ← текущая логика (оставляем совместимость)
-  markCompletedToday: (id: 'bio' | 'pill') => void;
-  isCompletedToday: (id: 'bio' | 'pill') => boolean;
-
-  // ↓ новые методы (пригодятся в следующих шагах)
-  getDayStatus: (dateISO: string) => DayStatus | undefined;
-  setDayStatus: (dateISO: string, patch: Partial<DayStatus>) => void;
-  history: HistoryMap; // полная история (на будущее для календаря)
+  isCompletedToday: (id: VideoId) => boolean;
+  markCompletedToday: (id: VideoId) => void;
+  setDayStatus: (date: DayISO, partial: Partial<DayStatus>) => void;
+  getDayStatus: (date: DayISO) => DayStatus | undefined;
 };
 
-const DailyProgressContext = createContext<Ctx | null>(null);
+const KEY = 'vsh25:progress';
+const C = createContext<Ctx | null>(null);
 
-/** Старый ключ (совместимость): { [id]: 'YYYY-MM-DD' } */
-const STORAGE_KEY_OLD = 'vsh25:dailyProgress';
-/** Новый ключ: история по датам */
-const STORAGE_KEY = 'vsh25:history';
-/** Сегодня в формате YYYY-MM-DD */
-const todayISO = () => new Date().toISOString().slice(0, 10);
+function todayISO(): DayISO {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
-export function DailyProgressProvider({ children }: { children: ReactNode }) {
-  const [history, setHistory] = useState<HistoryMap>({});
+// Храним статусы по дням, чистим старше 30 дней
+function prune(obj: Record<DayISO, DayStatus>) {
+  const entries = Object.entries(obj).sort(([a], [b]) => (a < b ? 1 : -1));
+  const sliced = entries.slice(0, 30);
+  return Object.fromEntries(sliced);
+}
 
-  // --- Загрузка: мигрируем старый формат в новый (один раз) ---
+export function DailyProgressProvider({ children }: { children: React.ReactNode }) {
+  const [map, setMap] = useState<Record<DayISO, DayStatus>>({});
+
+  // загрузка из SecureStore
   useEffect(() => {
     (async () => {
       try {
-        // Пытаемся прочитать новый формат
-        const rawNew = await AsyncStorage.getItem(STORAGE_KEY);
-        if (rawNew) {
-          setHistory(JSON.parse(rawNew));
-          return;
+        const raw = await SecureStore.getItemAsync(KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Record<DayISO, DayStatus>;
+          setMap(prune(parsed));
         }
-
-        // Если нового нет — читаем старый и мигрируем
-        const rawOld = await AsyncStorage.getItem(STORAGE_KEY_OLD);
-        if (rawOld) {
-          const old: Record<'bio' | 'pill' | string, string> = JSON.parse(rawOld);
-          const t = todayISO();
-          const migrated: HistoryMap = { [t]: {} };
-          if (old['bio'] === t) migrated[t].bio = true;
-          if (old['pill'] === t) migrated[t].pill = true;
-
-          setHistory(migrated);
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-          // старый ключ можно удалить позже; пока оставим, чтобы не потерять данные
-          return;
-        }
-
-        // Ничего не было — старт с пустой историей
-        setHistory({});
-      } catch {
-        setHistory({});
-      }
+      } catch {}
     })();
   }, []);
 
-  // --- Сохранение истории при каждом изменении ---
-  useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(history)).catch(() => {});
-  }, [history]);
-
-  // ---- Хелперы записи/чтения ----
-  const setDayStatus = (dateISO: string, patch: Partial<DayStatus>) => {
-    setHistory(prev => {
-      const prevDay = prev[dateISO] ?? {};
-      const nextDay: DayStatus = { ...prevDay, ...patch };
-      return { ...prev, [dateISO]: nextDay };
+  // удобная запись и немедленное сохранение
+  const write = (updater: (prev: Record<DayISO, DayStatus>) => Record<DayISO, DayStatus>) => {
+    setMap(prev => {
+      const next = prune(updater(prev));
+      // не ждём эффекта — сохраняем сразу
+      SecureStore.setItemAsync(KEY, JSON.stringify(next)).catch(() => {});
+      return next;
     });
   };
 
-  const getDayStatus = (dateISO: string) => history[dateISO];
-
-  // ---- Совместимость со старым API (используется в Player/Home) ----
-  const markCompletedToday = (id: 'bio' | 'pill') => {
-    const t = todayISO();
-    setDayStatus(t, { [id]: true } as Partial<DayStatus>);
+  const isCompletedToday = (id: VideoId) => {
+    const st = map[todayISO()];
+    return id === 'bio' ? !!st?.bio : !!st?.pill;
   };
 
-  const isCompletedToday = (id: 'bio' | 'pill') => {
-    const t = todayISO();
-    const day = history[t];
-    return Boolean(day?.[id]);
+  const markCompletedToday = (id: VideoId) => {
+    const day = todayISO();
+    write(prev => {
+      const cur = prev[day] ?? {};
+      const next: DayStatus = { ...cur, [id]: true };
+      return { ...prev, [day]: next };
+    });
   };
 
-  const value = useMemo<Ctx>(
-    () => ({
-      markCompletedToday,
-      isCompletedToday,
-      getDayStatus,
-      setDayStatus,
-      history,
-    }),
-    [history]
-  );
+  const setDayStatus = (date: DayISO, partial: Partial<DayStatus>) => {
+    write(prev => {
+      const cur = prev[date] ?? {};
+      const next: DayStatus = { ...cur, ...partial };
+      return { ...prev, [date]: next };
+    });
+  };
+
+  const getDayStatus = (date: DayISO) => map[date];
 
   return (
-    <DailyProgressContext.Provider value={value}>
+    <C.Provider value={{ isCompletedToday, markCompletedToday, setDayStatus, getDayStatus }}>
       {children}
-    </DailyProgressContext.Provider>
+    </C.Provider>
   );
 }
 
 export function useDailyProgress() {
-  const ctx = useContext(DailyProgressContext);
-  if (!ctx) throw new Error('useDailyProgress must be used inside DailyProgressProvider');
+  const ctx = useContext(C);
+  if (!ctx) throw new Error('useDailyProgress must be used within DailyProgressProvider');
   return ctx;
 }
