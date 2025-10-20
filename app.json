@@ -8,34 +8,51 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "net.vsh25.app"
+      "bundleIdentifier": "net.vsh25.app",
+      "buildNumber": "2"
     },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "net.vsh25.app"
+      "package": "net.vsh25.app",
+      "versionCode": 2
     },
+
     "web": {
       "favicon": "./assets/favicon.png"
     },
+
     "plugins": [
       "expo-secure-store"
     ],
+
+    "owner": "vsh25",
+
     "extra": {
       "eas": {
         "projectId": "f36a08e0-93e8-4802-aab4-c8a09431cbce"
       }
     },
-    "owner": "vsh25"
+
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+
+    "updates": {
+      "url": "https://u.expo.dev/f36a08e0-93e8-4802-aab4-c8a09431cbce"
+    }
   }
 }

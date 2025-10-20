@@ -3,33 +3,35 @@ import { View, Text } from 'react-native';
 import Card from './Card';
 import Chip from './Chip';
 import { theme } from '../theme';
+import Icon, { IconName } from './Icon';
 
 type Props = {
   title: string;
   tag?: string;
-  icon?: string;          // эмодзи, напр. "🧠"
+  iconName?: IconName;
   onPress?: () => void;
 };
 
-export default function KBCard({ title, tag, icon, onPress }: Props) {
+export default function KBCard({ title, tag, iconName, onPress }: Props) {
   return (
     <Card onPress={onPress} style={{ padding: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        {/* Превью-иконка (эмодзи в кружке) */}
-        {icon ? (
+        {iconName ? (
           <View
             style={{
               width: 36,
               height: 36,
               borderRadius: 18,
-              backgroundColor: theme.color.surface,
+              backgroundColor: '#EEF2F7',
               borderWidth: 1,
               borderColor: theme.color.border,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Text style={{ fontSize: 18 }}>{icon}</Text>
+            {/* белые PNG перекрашиваем в цвет текста */}
+            <Icon name={iconName} size={20} tint={theme.color.primary} />
+
           </View>
         ) : null}
 

@@ -2,6 +2,8 @@ import React, { useLayoutEffect, useRef, useCallback, useState, useEffect } from
 import { ScrollView, View, Text, StyleSheet, Alert, Platform, Pressable, RefreshControl } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
+import Icon from './ui/Icon';
+import { theme } from './theme';
 
 import LifeWidget from './ui/LifeWidget';
 import Card from './ui/Card';
@@ -14,12 +16,11 @@ import { useDailyVideos } from './hooks/useDailyVideos';
 import { useSubscription } from './subscription/Subscription';
 import { useGating } from './flags/gating';
 import { H2 } from './ui/Typography';
-import EmojiIcon from './ui/EmojiIcon';
 import KBCard from './ui/KBCard';
 import KBSkeleton from './ui/KBSkeleton';
 import { useFocusEffect } from '@react-navigation/native';
 import { toast } from './ui/toast';
-import HomeHero from './ui/HomeHero'; // ← добавили
+import HomeHero from './ui/HomeHero';
 
 export default function Home({ navigation }: any) {
   const scrollRef = useRef<ScrollView>(null);
@@ -90,30 +91,50 @@ export default function Home({ navigation }: any) {
     }
     return true;
   };
-  const testNotification10s = async () => { /* как было */ 
+
+  const testNotification10s = async () => {
     const ok = await ensureNotifPerms(); if (!ok) return;
-    await Notifications.scheduleNotificationAsync({ content: { title: 'VSH25', body: 'Тестовое уведомление' }, trigger: { seconds: 10 } });
-    Alert.alert('Запланировано', Platform.OS === 'android' ? 'Придёт через ~10 сек. Сверни приложение…' : 'Придёт через ~10 сек.');
+    await Notifications.scheduleNotificationAsync({
+      content: { title: 'VSH25', body: 'Тестовое уведомление' },
+      trigger: { seconds: 10 },
+    });
+    Alert.alert('Запланировано', Platform.OS === 'android'
+      ? 'Придёт через ~10 сек. Сверни приложение…'
+      : 'Придёт через ~10 сек.');
   };
+
   const scheduleDaily2100 = async () => {
     const ok = await ensureNotifPerms();
     if (!ok) return;
-  
+
     await Notifications.cancelAllScheduledNotificationsAsync();
     await Notifications.scheduleNotificationAsync({
       content: { title: 'VSH25', body: 'Время биопрограммы. 10 минут — и день засчитан.' },
       trigger: { hour: 21, minute: 0, repeats: true },
     });
-  
+
     Alert.alert('Готово', 'Ежедневное напоминание в 21:00 включено.');
   };
-  const cancelDailyReminders = async () => { await Notifications.cancelAllScheduledNotificationsAsync(); Alert.alert('Отключено', 'Ежедневные напоминания удалены.'); };
+
+  const cancelDailyReminders = async () => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    Alert.alert('Отключено', 'Ежедневные напоминания удалены.');
+  };
 
   // открыть статью …
   const openArticle = async (url: string) => {
-    try { const res = await fetch(url, { method: 'HEAD' }); if (!res.ok) { Alert.alert('Статья не найдена', 'Ссылка пока заглушка.'); return; } }
-    catch {}
-    await WebBrowser.openBrowserAsync(url, Platform.select({ ios: { preferredBarTintColor: '#2B7EEB', preferredControlTintColor: '#FFFFFF' }, android: { toolbarColor: '#2B7EEB', showTitle: true }, default: {} }));
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+      if (!res.ok) { Alert.alert('Статья не найдена', 'Ссылка пока заглушка.'); return; }
+    } catch {}
+    await WebBrowser.openBrowserAsync(
+      url,
+      Platform.select({
+        ios: { preferredBarTintColor: '#2B7EEB', preferredControlTintColor: '#FFFFFF' },
+        android: { toolbarColor: '#2B7EEB', showTitle: true },
+        default: {},
+      }),
+    );
   };
 
   // кнопка «Профиль» в хедере
@@ -163,7 +184,7 @@ export default function Home({ navigation }: any) {
 
       {/* Биопрограмма */}
       <Card
-        left={<EmojiIcon icon="🧬" />}
+        left={<Icon name="bio" size={36} tint={theme.color.primary} />}
         title={bio.title}
         subtitle={bioLocked ? '🔒 Требует подписку' : 'Ежедневная практика для активного долголетия'}
         right={bioLocked ? <Text style={styles.lock}>🔒</Text> : (bioDone ? <DoneBadge /> : null)}
@@ -174,7 +195,7 @@ export default function Home({ navigation }: any) {
 
       {/* Цифровая таблетка */}
       <Card
-        left={<EmojiIcon icon="💊" />}
+        left={<Icon name="pill" size={36} tint={theme.color.primary} />}
         title={pill.title}
         subtitle={pillLocked ? '🔒 Требует подписку' : 'Быстрый эффект, когда нет времени'}
         right={pillLocked ? <Text style={styles.lock}>🔒</Text> : (pillDone ? <DoneBadge /> : null)}
@@ -203,7 +224,7 @@ export default function Home({ navigation }: any) {
         style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
         hitSlop={8}
       >
-        <Text style={{ fontSize: 20 }}>📚</Text>
+        <Icon name="book" size={22} tint={theme.color.primary} />
         <H2 style={{ marginBottom: 0 }}>{t('kb.title', 'База знаний')}</H2>
       </Pressable>
 
@@ -211,7 +232,13 @@ export default function Home({ navigation }: any) {
         <KBSkeleton />
       ) : (
         articles.map((a) => (
-          <KBCard key={a.id} title={a.title} tag={a.tag} icon={a.icon} onPress={() => openArticle(a.url)} />
+          <KBCard
+            key={a.id}
+            title={a.title}
+            tag={a.tag}
+            iconName={a.iconName}
+            onPress={() => openArticle(a.url)}
+          />
         ))
       )}
 
