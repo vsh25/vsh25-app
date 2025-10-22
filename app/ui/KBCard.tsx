@@ -29,9 +29,7 @@ export default function KBCard({ title, tag, iconName, onPress }: Props) {
               justifyContent: 'center',
             }}
           >
-            {/* белые PNG перекрашиваем в цвет текста */}
-            <Icon name={iconName} size={20} tint={theme.color.primary} />
-
+            <Icon name={iconName} size={22} tint={theme.color.muted} />
           </View>
         ) : null}
 

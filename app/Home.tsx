@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 import Icon from './ui/Icon';
 import { theme } from './theme';
+import * as Application from 'expo-application';
 
 import LifeWidget from './ui/LifeWidget';
 import Card from './ui/Card';
@@ -165,6 +166,7 @@ export default function Home({ navigation }: any) {
   };
 
   return (
+    
     <ScrollView
       ref={scrollRef}
       contentContainerStyle={styles.container}
@@ -224,7 +226,8 @@ export default function Home({ navigation }: any) {
         style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
         hitSlop={8}
       >
-        <Icon name="book" size={22} tint={theme.color.primary} />
+        <Icon name="book" size={22} tint={theme.color.muted} />
+
         <H2 style={{ marginBottom: 0 }}>{t('kb.title', 'База знаний')}</H2>
       </Pressable>
 
@@ -247,6 +250,11 @@ export default function Home({ navigation }: any) {
       <Text style={styles.today}>
         За сегодня: Биопрограмма {isCompletedToday('bio') ? '✓' : '—'} · Таблетка {isCompletedToday('pill') ? '✓' : '—'}
       </Text>
+      <View style={{ alignItems: 'center', marginTop: 8 }}>
+  <Text style={{ color: '#9CA3AF', fontSize: 12 }}>
+    v{Application.nativeApplicationVersion} ({Application.nativeBuildVersion})
+  </Text>
+</View>
     </ScrollView>
   );
 }

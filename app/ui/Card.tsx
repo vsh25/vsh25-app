@@ -24,8 +24,7 @@ export default function Card({ title, subtitle, left, right, children, onPress, 
           padding: 16,
           ...theme.shadow.card,
         },
-        // @ts-ignore
-        style,
+        style as any,
       ]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
@@ -39,7 +38,11 @@ export default function Card({ title, subtitle, left, right, children, onPress, 
                   {title}
                 </Text>
               )}
-              {subtitle && <Text style={{ marginTop: 4, color: theme.color.muted }}>{subtitle}</Text>}
+              {subtitle && (
+                <Text style={{ marginTop: 6, color: theme.color.muted, fontSize: 13 }}>
+                  {subtitle}
+                </Text>
+              )}
             </>
           )}
           {children}
@@ -58,7 +61,7 @@ export default function Card({ title, subtitle, left, right, children, onPress, 
       android_ripple={{ color: '#00000014' }}
       style={({ pressed }) => [
         { borderRadius: theme.radius.l },
-        pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }, // iOS highlight
+        pressed && { opacity: 0.96, transform: [{ scale: 0.99 }] },
       ]}
     >
       {Inner}

@@ -7,7 +7,7 @@ export function H1(props: TextProps) {
     <Text
       {...props}
       style={[
-        { fontSize: theme.font.size.xl, fontWeight: '700', color: theme.color.text, marginBottom: 12 },
+        { fontSize: 24, fontWeight: '700', color: theme.color.text, marginBottom: 12 },
         props.style,
       ]}
     />
@@ -19,7 +19,7 @@ export function H2(props: TextProps) {
     <Text
       {...props}
       style={[
-        { fontSize: theme.font.size.l, fontWeight: '700', color: theme.color.text, marginBottom: 10 },
+        { fontSize: 22, fontWeight: '700', color: theme.color.text, marginBottom: 10 },
         props.style,
       ]}
     />
@@ -31,7 +31,7 @@ export function Subtle(props: TextProps) {
     <Text
       {...props}
       style={[
-        { color: theme.color.muted },
+        { color: theme.color.muted, fontSize: 13 },
         props.style,
       ]}
     />

@@ -27,7 +27,7 @@ export const theme = {
 
   // Градиенты (на будущее: hero/CTA в стиле Luma)
   grad: {
-    hero: ['#1E3A8A', '#0EA5E9'],
+    hero: ['#1E3A8A', '#0EA5E9'],  // тёмно-синий → бирюзовый
     cta:  ['#2563EB', '#60A5FA'],
   },
 
