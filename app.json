@@ -8,19 +8,16 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "net.vsh25.app",
       "buildNumber": "2"
     },
-
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -30,27 +27,25 @@
       "package": "net.vsh25.app",
       "versionCode": 2
     },
-
     "web": {
       "favicon": "./assets/favicon.png"
     },
-
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font",
+      "expo-web-browser"
     ],
-
     "owner": "vsh25",
-
     "extra": {
       "eas": {
         "projectId": "f36a08e0-93e8-4802-aab4-c8a09431cbce"
-      }
+      },
+      "apiBaseUrl": "https://dev.api.vsh25.net",
+      "useMocks": true
     },
-
     "runtimeVersion": {
       "policy": "appVersion"
     },
-
     "updates": {
       "url": "https://u.expo.dev/f36a08e0-93e8-4802-aab4-c8a09431cbce"
     }

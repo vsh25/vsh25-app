@@ -45,24 +45,55 @@ Notifications.setNotificationHandler({
 const Stack = createNativeStackNavigator();
 
 function RootStacks() {
-  const { token, initializing } = useSession();
+  // теперь из useSession берём user и initializing
+  const { user, initializing } = useSession();
+
+  // пока идёт инициализация (чтение токена + попытка /me) ничего не рисуем
   if (initializing) return null;
 
-  if (token) {
+  const isAuthed = !!user;
+
+  if (isAuthed) {
+    // Пользователь залогинен — основной стек приложения
     return (
       <Stack.Navigator>
-        <Stack.Screen name="Home" component={Home} options={{ title: 'VSH25' }} />
-        <Stack.Screen name="Player" component={Player} options={{ title: 'Player' }} />
-        <Stack.Screen name="Profile" component={Profile} options={{ title: 'Profile' }} />
-        <Stack.Screen name="Paywall" component={Paywall} options={{ title: 'Подписка' }} />
+        <Stack.Screen
+          name="Home"
+          component={Home}
+          options={{ title: 'VSH25' }}
+        />
+        <Stack.Screen
+          name="Player"
+          component={Player}
+          options={{ title: 'Player' }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={Profile}
+          options={{ title: 'Profile' }}
+        />
+        <Stack.Screen
+          name="Paywall"
+          component={Paywall}
+          options={{ title: 'Подписка' }}
+        />
       </Stack.Navigator>
     );
   }
 
+  // Пользователь не залогинен — стек авторизации
   return (
     <Stack.Navigator>
-      <Stack.Screen name="Login" component={Login} options={{ title: 'Вход' }} />
-      <Stack.Screen name="Otp" component={Otp} options={{ title: 'Подтверждение' }} />
+      <Stack.Screen
+        name="Login"
+        component={Login}
+        options={{ title: 'Вход' }} // как на веб-скриншоте
+      />
+      <Stack.Screen
+        name="Otp"
+        component={Otp}
+        options={{ title: 'Подтверждение' }}
+      />
     </Stack.Navigator>
   );
 }
@@ -90,7 +121,9 @@ export default function App() {
   // 3) useEffect — тоже вызываем всегда (даже если шрифты ещё грузятся)
   useEffect(() => {
     (async () => {
-      try { await loadSavedLanguage(); } catch {}
+      try {
+        await loadSavedLanguage();
+      } catch {}
       await Notifications.requestPermissionsAsync();
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {

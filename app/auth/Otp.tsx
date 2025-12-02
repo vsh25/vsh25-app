@@ -1,89 +1,186 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Alert } from 'react-native';
-import Input from '../ui/Input';
-import Button from '../ui/Button';
-import { verifyOtp, requestOtp } from '../api/auth';
+// app/auth/Otp.tsx
+// Экран подтверждения кода (6 цифр) — как на сайте.
+// Теперь использует API-слой verifyCode (через моки).
+
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { useTranslation } from 'react-i18next';
+import UIButton from '../ui/Button';
+import { theme } from '../theme';
 import { useSession } from '../session/Session';
+import { verifyCode } from '../api/auth';
 
-const RESEND_SECONDS = 30;
+type Props = {
+  navigation: any;
+  route: any;
+};
 
-export default function Otp({ route, navigation }: any) {
-  const identifier: string = route?.params?.identifier ?? '';
+export default function Otp({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const { signIn } = useSession();
+
+  const contact: string | undefined = route?.params?.contact;
+  const requestId: string | undefined = route?.params?.requestId;
+  const initialTtl: number = route?.params?.ttl ?? 60;
 
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [left, setLeft] = useState(RESEND_SECONDS);     // таймер
-  const canSubmit = useMemo(() => /^\d{6}$/.test(code), [code]);
-
-  // обратный отсчёт
-  useEffect(() => {
-    setLeft(RESEND_SECONDS); // каждый раз при открытии
-  }, [identifier]);
+  const [loading, setLoading] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(initialTtl); // таймер повтора
 
   useEffect(() => {
-    if (left <= 0) return;
-    const t = setInterval(() => setLeft(s => (s > 0 ? s - 1 : 0)), 1000);
-    return () => clearInterval(t);
-  }, [left]);
+    const id = setInterval(() => {
+      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
-  const confirm = async () => {
-    if (!canSubmit) { setError('Введите 6 цифр'); return; }
-    setError(null);
-    try {
-      const res = await verifyOtp(identifier, code);
-      await signIn(res.token);
-      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
-    } catch (e: any) {
-      setError(e?.message ?? 'Неверный код');
+  const onSubmit = async () => {
+    if (code.length !== 6) {
+      setError('Введите код из 6 цифр');
+      return;
     }
-  };
+    if (!requestId) {
+      setError('Нет идентификатора заявки. Попробуйте запросить код ещё раз.');
+      return;
+    }
 
-  const resend = async () => {
+    setError(null);
+    setLoading(true);
+
     try {
-      await requestOtp(identifier);
-      setLeft(RESEND_SECONDS);
-      Alert.alert('Код отправлен', `Мы повторно отправили код на ${identifier}`);
+      // Здесь будет реальный вызов backend-а.
+      // Сейчас — мок: verifyCode бросает ошибку, если code !== "123456"
+      const res = await verifyCode({ requestId, code });
+
+      await signIn(res.token);
     } catch (e: any) {
-      Alert.alert('Ошибка', e?.message ?? 'Не удалось отправить код');
+      setError(e?.message || 'Не удалось подтвердить код. Попробуйте ещё раз.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', gap: 12, padding: 24 }}>
-      <Text style={{ fontSize: 22, fontWeight: '600', marginBottom: 4 }}>
-        Подтверждение
-      </Text>
-      <Text style={{ color: '#64748B', marginBottom: 8 }}>
-        Введите код из {identifier.includes('@') ? 'email' : 'SMS'} для {identifier}
-      </Text>
-
-      <Input
-        value={code}
-        onChangeText={(t) => setCode(t.replace(/[^\d]/g, '').slice(0, 6))}
-        placeholder="••••••"
-        keyboardType="number-pad"
-        inputMode="numeric"
-        autoFocus
-        letterSpacing={6}
-        textAlign="center"
-        maxLength={6}
-        error={error || undefined}
-        helperText={!error ? 'Код из 6 цифр' : undefined}
-        fullWidth
-      />
-
-      <Button title="Подтвердить" onPress={confirm} disabled={!canSubmit} fullWidth />
-
-      <View style={{ height: 8 }} />
-
-      {left > 0 ? (
-        <Text style={{ textAlign: 'center', color: '#64748B' }}>
-          Повторная отправка через {left} сек
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <View style={styles.card}>
+        <Text style={styles.title}>
+          {t('auth.otpTitle', 'Подтверждение')}
         </Text>
-      ) : (
-        <Button title="Отправить код повторно" variant="outline" onPress={resend} fullWidth />
-      )}
-    </View>
+        <Text style={styles.subtitle}>
+          {contact
+            ? t(
+                'auth.otpSubtitleWithContact',
+                'Введите код, отправленный для {{contact}}',
+                { contact }
+              )
+            : t('auth.otpSubtitle', 'Введите код из SMS или email')}
+        </Text>
+
+        <Text style={styles.label}>
+          {t('auth.codeLabel', 'Код из 6 цифр')}
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder={t('auth.codePlaceholder', '••••••')}
+          placeholderTextColor="#6B7280"
+          keyboardType="number-pad"
+          maxLength={6}
+          value={code}
+          onChangeText={setCode}
+          returnKeyType="done"
+          onSubmitEditing={onSubmit}
+        />
+
+        {error && <Text style={styles.error}>{error}</Text>}
+
+        <View style={{ marginTop: 24 }}>
+          <UIButton
+            title={t('auth.otpConfirmButton', 'Подтвердить')}
+            onPress={onSubmit}
+            loading={loading}
+            fullWidth
+          />
+        </View>
+
+        <Text style={styles.timerText}>
+          {secondsLeft > 0
+            ? t(
+                'auth.otpResendIn',
+                'Повторная отправка через {{sec}} сек',
+                { sec: secondsLeft }
+              )
+            : t('auth.otpResendReady', 'Можно запросить код повторно')}
+        </Text>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#020617',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  card: {
+    width: '100%',
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    backgroundColor: '#0B1220',
+  },
+  title: {
+    textAlign: 'left',
+    color: '#F9FAFB',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  subtitle: {
+    textAlign: 'left',
+    color: '#9CA3AF',
+    fontSize: 13,
+    marginBottom: 20,
+  },
+  label: {
+    color: '#E5E7EB',
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#020617',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#F9FAFB',
+    fontSize: 20,
+    letterSpacing: 8,
+    textAlign: 'center',
+  },
+  error: {
+    marginTop: 12,
+    color: '#F97373',
+    fontSize: 13,
+  },
+  timerText: {
+    marginTop: 16,
+    textAlign: 'center',
+    color: '#9CA3AF',
+    fontSize: 12,
+  },
+});

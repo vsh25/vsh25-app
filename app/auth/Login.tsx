@@ -1,77 +1,158 @@
+// app/auth/Login.tsx
+// Вход по email или телефону — отправляем одноразовый код (как на сайте).
+
 import React, { useState } from 'react';
-import { View, Text, Alert, StyleSheet, StatusBar } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { requestOtp } from '../api/auth';
-import Input from '../ui/Input';
-import Button from '../ui/Button';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { useTranslation } from 'react-i18next';
+import UIButton from '../ui/Button';
 import { theme } from '../theme';
+import { requestCode } from '../api/auth';
 
-export default function Login({ navigation }: any) {
-  const [id, setId] = useState('');
+type Props = {
+  navigation: any;
+};
+
+export default function Login({ navigation }: Props) {
+  const { t } = useTranslation();
+  const [contact, setContact] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const trimmed = id.trim();
-  const isPhone = /^\+?\d[\d\s\-()]{5,}$/.test(trimmed);
-  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+  const onSubmit = async () => {
+    const trimmed = contact.trim();
+    if (!trimmed) {
+      setError('Введите email или телефон');
+      return;
+    }
 
-  const sendCode = async () => {
-    if (!isPhone && !isEmail) { setError('Введите корректный email или телефон'); return; }
     setError(null);
+    setLoading(true);
+
     try {
-      await requestOtp(trimmed);
-      navigation.navigate('Otp', { identifier: trimmed });
+      // теперь реально вызываем API-слой (пока через моки)
+      const res = await requestCode({ contact: trimmed });
+
+      // передаём на экран Otp и контакт, и requestId, и ttl
+      navigation.navigate('Otp', {
+        contact: trimmed,
+        requestId: res.requestId,
+        ttl: res.ttl,
+      });
     } catch (e: any) {
-      Alert.alert('Ошибка', e?.message ?? 'Не удалось отправить код');
+      setError(e?.message || 'Не удалось отправить код. Попробуйте ещё раз.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.color.bg }}>
-      <StatusBar barStyle="dark-content" />
-      <LinearGradient
-        colors={['#F7E3E7', '#E6EEFF']}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={styles.wrap}
-      >
-        <Text style={styles.title}>Вход</Text>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <View style={styles.card}>
+        <Text style={styles.logoText}>VSH25</Text>
+
+        <Text style={styles.title}>
+          {t('auth.signInTitle', 'Вход')}
+        </Text>
         <Text style={styles.subtitle}>
-          Введите email или телефон — отправим одноразовый код.
+          {t(
+            'auth.signInOtpSubtitle',
+            'Введите email или телефон — отправим одноразовый код.'
+          )}
         </Text>
 
-        <View style={{ height: 16 }} />
-
-        <Input
-          value={id}
-          onChangeText={setId}
-          placeholder="Email или телефон"
+        <Text style={styles.label}>
+          {t('auth.contactLabel', 'Email или телефон')}
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder={t('auth.contactPlaceholder', 'Email или телефон')}
+          placeholderTextColor="#6B7280"
           autoCapitalize="none"
-          inputMode={isPhone ? 'tel' : 'email'}
-          keyboardType={isPhone ? 'phone-pad' : 'default'}
-          autoComplete={isPhone ? 'tel' : 'email'}
-          textContentType={isPhone ? 'telephoneNumber' : 'emailAddress'}
-          error={error || undefined}
-          fullWidth
+          keyboardType="email-address"
+          value={contact}
+          onChangeText={setContact}
+          returnKeyType="done"
+          onSubmitEditing={onSubmit}
         />
 
-        <View style={{ height: 16 }} />
+        {error && <Text style={styles.error}>{error}</Text>}
 
-        <Button title="Получить код" onPress={sendCode} fullWidth />
-      </LinearGradient>
-    </View>
+        <View style={{ marginTop: 24 }}>
+          <UIButton
+            title={t('auth.getCodeButton', 'Получить код')}
+            onPress={onSubmit}
+            loading={loading}
+            fullWidth
+          />
+        </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, paddingHorizontal: 24, paddingTop: 48 },
+  screen: {
+    flex: 1,
+    backgroundColor: '#020617', // тёмный фон
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  card: {
+    width: '100%',
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    backgroundColor: '#0B1220',
+  },
+  logoText: {
+    textAlign: 'center',
+    color: '#E5E7EB',
+    fontSize: 18,
+    letterSpacing: 4,
+    marginBottom: 12,
+  },
   title: {
-    fontFamily: 'Rubik-SemiBold',
-    fontSize: 28,
-    color: theme.color.text,
-    marginBottom: 6,
+    textAlign: 'left',
+    color: '#F9FAFB',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   subtitle: {
-    fontFamily: 'Rubik-Regular',
-    fontSize: 16,
-    color: theme.color.muted,
+    textAlign: 'left',
+    color: '#9CA3AF',
+    fontSize: 13,
+    marginBottom: 20,
+  },
+  label: {
+    color: '#E5E7EB',
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#020617',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#F9FAFB',
+    fontSize: 15,
+  },
+  error: {
+    marginTop: 12,
+    color: '#F97373',
+    fontSize: 13,
   },
 });
