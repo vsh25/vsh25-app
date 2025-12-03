@@ -4,6 +4,10 @@ import { Platform, LogBox } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import ForgotStart from './app/auth/ForgotStart';
+import ForgotOtp from './app/auth/ForgotOtp';
+import ForgotReset from './app/auth/ForgotReset';
+
 import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
 
@@ -11,8 +15,12 @@ import Home from './app/Home';
 import Player from './app/Player';
 import Profile from './app/Profile';
 import Paywall from './app/Paywall';
+
 import Login from './app/auth/Login';
 import Otp from './app/auth/Otp';
+import RegisterStart from './app/auth/RegisterStart';
+import RegisterOtp from './app/auth/RegisterOtp';
+import RegisterDetails from './app/auth/RegisterDetails';
 
 import { SessionProvider, useSession } from './app/session/Session';
 import { SubscriptionProvider } from './app/subscription/Subscription';
@@ -45,18 +53,16 @@ Notifications.setNotificationHandler({
 const Stack = createNativeStackNavigator();
 
 function RootStacks() {
-  // теперь из useSession берём user и initializing
   const { user, initializing } = useSession();
 
-  // пока идёт инициализация (чтение токена + попытка /me) ничего не рисуем
   if (initializing) return null;
 
   const isAuthed = !!user;
 
   if (isAuthed) {
-    // Пользователь залогинен — основной стек приложения
+    // Авторизованный стек
     return (
-      <Stack.Navigator>
+      <Stack.Navigator key="app">
         <Stack.Screen
           name="Home"
           component={Home}
@@ -81,18 +87,48 @@ function RootStacks() {
     );
   }
 
-  // Пользователь не залогинен — стек авторизации
+  // Стек авторизации
   return (
-    <Stack.Navigator>
+    <Stack.Navigator key="auth">
       <Stack.Screen
         name="Login"
         component={Login}
-        options={{ title: 'Вход' }} // как на веб-скриншоте
+        options={{ title: 'Вход' }}
       />
       <Stack.Screen
         name="Otp"
         component={Otp}
         options={{ title: 'Подтверждение' }}
+      />
+      <Stack.Screen
+        name="RegisterStart"
+        component={RegisterStart}
+        options={{ title: 'Регистрация' }}
+      />
+      <Stack.Screen
+        name="RegisterOtp"
+        component={RegisterOtp}
+        options={{ title: 'Подтверждение регистрации' }}
+      />
+      <Stack.Screen
+        name="RegisterDetails"
+        component={RegisterDetails}
+        options={{ title: 'Регистрация' }}
+      />
+      <Stack.Screen
+        name="ForgotStart"
+        component={ForgotStart}
+        options={{ title: 'Восстановление пароля' }}
+      />
+      <Stack.Screen
+        name="ForgotOtp"
+        component={ForgotOtp}
+        options={{ title: 'Подтверждение кода' }}
+      />
+      <Stack.Screen
+        name="ForgotReset"
+        component={ForgotReset}
+        options={{ title: 'Новый пароль' }}
       />
     </Stack.Navigator>
   );

@@ -12,17 +12,26 @@ import { toast } from './ui/toast';
 import { useGating } from './flags/gating';
 
 export default function Profile() {
-  const { signOut } = useSession();
+  const { user, signOut } = useSession();
   const { t } = useTranslation();
   const current = (i18n.language as 'ru' | 'en') || 'ru';
 
   const { mode, setMode } = useGating();
   const bioIsPay = mode.bio === 'pay';
   const pillIsPay = mode.pill === 'pay';
-  const kbIsPay  = mode.kb  === 'pay';
+  const kbIsPay = mode.kb === 'pay';
 
   const [enabling, setEnabling] = useState(false);
   const [disabling, setDisabling] = useState(false);
+
+  const subscriptionStatusLabel = (() => {
+    if (!user) return 'Не авторизован';
+    const status = user.subscription?.status;
+    if (status === 'active') return 'Подписка: активна';
+    if (status === 'trial') return 'Подписка: пробный доступ';
+    if (!status) return 'Подписка: нет';
+    return `Подписка: ${status}`;
+  })();
 
   const ensurePerms = async () => {
     let { status } = await Notifications.getPermissionsAsync();
@@ -67,14 +76,30 @@ export default function Profile() {
 
   return (
     <View style={styles.container}>
-      {/* Заголовок */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Text style={{ fontSize: 20 }}>👤</Text>
+      {/* Карточка пользователя */}
+      <View style={styles.userCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarEmoji}>👤</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.userName}>
+            {user?.display_name || 'Гость VSH25'}
+          </Text>
+          {user?.email && (
+            <Text style={styles.userEmail}>{user.email}</Text>
+          )}
+          <Text style={styles.userSub}>{subscriptionStatusLabel}</Text>
+        </View>
+      </View>
+
+      {/* Заголовок «Профиль» */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24 }}>
+        <Text style={{ fontSize: 20 }}>⚙️</Text>
         <H2 style={{ marginBottom: 0 }}>{t('profile.title', 'Профиль')}</H2>
       </View>
 
       {/* Язык */}
-      <Subtle style={{ marginBottom: 8 }}>
+      <Subtle style={{ marginBottom: 8, marginTop: 12 }}>
         {t('profile.language', 'Язык интерфейса')}
       </Subtle>
       <View style={styles.row}>
@@ -96,21 +121,33 @@ export default function Profile() {
       <Subtle style={{ marginBottom: 8 }}>Доступ к контенту</Subtle>
 
       <UIButton
-        title={bioIsPay ? 'Биопрограмма: платно → сделать бесплатно' : 'Биопрограмма: бесплатно → сделать платно'}
+        title={
+          bioIsPay
+            ? 'Биопрограмма: платно → сделать бесплатно'
+            : 'Биопрограмма: бесплатно → сделать платно'
+        }
         variant={bioIsPay ? 'outline' : 'primary'}
         onPress={() => setMode('bio', bioIsPay ? 'free' : 'pay')}
         fullWidth
       />
       <View style={{ height: 8 }} />
       <UIButton
-        title={pillIsPay ? 'Таблетка: платно → сделать бесплатно' : 'Таблетка: бесплатно → сделать платно'}
+        title={
+          pillIsPay
+            ? 'Таблетка: платно → сделать бесплатно'
+            : 'Таблетка: бесплатно → сделать платно'
+        }
         variant={pillIsPay ? 'outline' : 'primary'}
         onPress={() => setMode('pill', pillIsPay ? 'free' : 'pay')}
         fullWidth
       />
       <View style={{ height: 8 }} />
       <UIButton
-        title={kbIsPay ? 'База знаний: платно → сделать бесплатно' : 'База знаний: бесплатно → сделать платно'}
+        title={
+          kbIsPay
+            ? 'База знаний: платно → сделать бесплатно'
+            : 'База знаний: бесплатно → сделать платно'
+        }
         variant={kbIsPay ? 'outline' : 'primary'}
         onPress={() => setMode('kb', kbIsPay ? 'free' : 'pay')}
         fullWidth
@@ -137,12 +174,58 @@ export default function Profile() {
 
       {/* Выход */}
       <View style={{ height: 20 }} />
-      <UIButton title={t('auth.logout', 'Выйти')} variant="outline" onPress={signOut} fullWidth />
+      <UIButton
+        title={t('auth.logout', 'Выйти')}
+        variant="outline"
+        onPress={signOut}
+        fullWidth
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: theme.color.bg },
-  row: { flexDirection: 'row', alignItems: 'center' },
+  container: {
+    flex: 1,
+    padding: 24,
+    backgroundColor: theme.color.bg,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: '#020617',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarEmoji: {
+    fontSize: 24,
+  },
+  userName: {
+    color: '#F9FAFB',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  userEmail: {
+    color: '#9CA3AF',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  userSub: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    marginTop: 6,
+  },
 });

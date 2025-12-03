@@ -1,11 +1,18 @@
 // app/api/mocks.ts
 //
-// Простейшие моки для разработки без реального сервера.
-// Сейчас мокируем:
+// Моки для разработки без реального сервера.
+//
+// Мокируем:
 //  - /wp-json/vsh25/v1/me
 //  - /wp-json/vsh25/v1/progress
 //  - /api/auth/request-code
 //  - /api/auth/verify-code
+//  - /api/auth/register/start
+//  - /api/auth/register/verify
+//  - /api/auth/register/complete
+//  - /api/auth/forgot/start
+//  - /api/auth/forgot/verify
+//  - /api/auth/forgot/reset
 
 import type { ApiOptions } from './client';
 
@@ -15,7 +22,9 @@ export async function mockFetch<T>(
 ): Promise<T> {
   const { method = 'GET', body } = options;
 
-  // Профиль пользователя (макет)
+  // ──────────────────────────────────────────────
+  // Профиль пользователя (ME)
+  // ──────────────────────────────────────────────
   if (path === '/wp-json/vsh25/v1/me' && method === 'GET') {
     return {
       id: 1,
@@ -37,7 +46,9 @@ export async function mockFetch<T>(
     } as any;
   }
 
-  // Прогресс (макет)
+  // ──────────────────────────────────────────────
+  // Прогресс (PROGRESS)
+  // ──────────────────────────────────────────────
   if (path === '/wp-json/vsh25/v1/progress' && method === 'GET') {
     return {
       earned_seconds: 36000,
@@ -46,9 +57,10 @@ export async function mockFetch<T>(
     } as any;
   }
 
-  // ----- АВТОРИЗАЦИЯ ЧЕРЕЗ КОД -----
+  // ──────────────────────────────────────────────
+  // OTP-вход
+  // ──────────────────────────────────────────────
 
-  // Запрос кода (email/телефон)
   if (path === '/api/auth/request-code' && method === 'POST') {
     const contact = (body as any)?.contact || '';
     console.log('[MOCK] request-code for', contact);
@@ -59,7 +71,6 @@ export async function mockFetch<T>(
     } as any;
   }
 
-  // Проверка кода
   if (path === '/api/auth/verify-code' && method === 'POST') {
     const { code, requestId } = (body || {}) as any;
     console.log('[MOCK] verify-code', { requestId, code });
@@ -73,7 +84,80 @@ export async function mockFetch<T>(
     } as any;
   }
 
-  // Если для конкретного path нет мока — бросаем ошибку,
-  // чтобы сразу увидеть, что запрос забыли замокать.
+  // ──────────────────────────────────────────────
+  // РЕГИСТРАЦИЯ (wizard 1–3)
+  // ──────────────────────────────────────────────
+
+  if (path === '/api/auth/register/start' && method === 'POST') {
+    const { contact, channel } = (body || {}) as any;
+    console.log('[MOCK] register-start', { contact, channel });
+
+    return {
+      requestId: 'mock-register-id-123',
+      ttl: 60,
+    } as any;
+  }
+
+  if (path === '/api/auth/register/verify' && method === 'POST') {
+    const { requestId, code } = (body || {}) as any;
+    console.log('[MOCK] register-verify', { requestId, code });
+
+    if (code !== '123456') {
+      throw new Error('Неверный код регистрации. Для теста используйте 123456.');
+    }
+
+    return {
+      ok: true,
+    } as any;
+  }
+
+  if (path === '/api/auth/register/complete' && method === 'POST') {
+    const { requestId, firstName, lastName } = (body || {}) as any;
+    console.log('[MOCK] register-complete', { requestId, firstName, lastName });
+
+    return {
+      token: 'demo-token',
+    } as any;
+  }
+
+  // ──────────────────────────────────────────────
+  // ВОССТАНОВЛЕНИЕ ПАРОЛЯ (forgot password)
+// ──────────────────────────────────────────────
+
+  if (path === '/api/auth/forgot/start' && method === 'POST') {
+    const { email } = (body || {}) as any;
+    console.log('[MOCK] forgot-start', { email });
+
+    return {
+      requestId: 'mock-forgot-id-123',
+      ttl: 60,
+    } as any;
+  }
+
+  if (path === '/api/auth/forgot/verify' && method === 'POST') {
+    const { requestId, code } = (body || {}) as any;
+    console.log('[MOCK] forgot-verify', { requestId, code });
+
+    if (code !== '123456') {
+      throw new Error('Неверный код восстановления. Для теста используйте 123456.');
+    }
+
+    return {
+      ok: true,
+    } as any;
+  }
+
+  if (path === '/api/auth/forgot/reset' && method === 'POST') {
+    const { requestId } = (body || {}) as any;
+    console.log('[MOCK] forgot-reset', { requestId });
+
+    return {
+      success: true,
+    } as any;
+  }
+
+  // ──────────────────────────────────────────────
+  // Если не нашли мок — явно ругаемся
+  // ──────────────────────────────────────────────
   throw new Error(`No mock implemented for path: ${method} ${path}`);
 }

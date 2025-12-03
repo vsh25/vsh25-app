@@ -1,10 +1,3 @@
-// app/session/Session.tsx
-// Контекст сессии VSH25:
-// - хранит auth-токен (пока абстрактный, потом свяжем с реальным логином);
-// - подтягивает профиль пользователя через /wp-json/vsh25/v1/me;
-// - даёт signIn/signOut, чтобы экраны логина/профиля могли работать
-//   в стиле нашего UI-кита (скриншоты сайта + тёмный мобильный UI).
-
 import React, {
   createContext,
   useContext,
@@ -17,17 +10,11 @@ import * as SecureStore from 'expo-secure-store';
 import { getMe, UserProfile } from '../api/me';
 
 type SessionCtx = {
-  /** Текущий auth-токен (будем получать его от API логина) */
   token: string | null;
-  /** Профиль пользователя с бэка (/me), либо null если не залогинен */
   user: UserProfile | null;
-  /** Идёт ли начальная инициализация (чтение токена + попытка /me) */
   initializing: boolean;
-  /** Явно грузим профиль (например, после логина или в экране профиля) */
   reloadProfile: () => Promise<void>;
-  /** Вход: сохраняем токен и подтягиваем профиль */
   signIn: (token: string) => Promise<void>;
-  /** Выход: чистим токен и профиль */
   signOut: () => Promise<void>;
 };
 
@@ -39,7 +26,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [initializing, setInit] = useState(true);
 
-  // начальная инициализация: читаем токен и, если он есть, пытаемся загрузить /me
+  // начальная инициализация: читаем токен и, если он есть, загрузим /me
   useEffect(() => {
     let cancelled = false;
 
@@ -54,8 +41,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             const me = await getMe();
             if (!cancelled) setUser(me);
           } catch {
-            // если /me отвалилась (например, токен устарел) —
-            // не падаем, просто считаем, что юзер не залогинен
             if (!cancelled) {
               setUser(null);
             }
@@ -79,17 +64,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const me = await getMe();
       setUser(me);
     } catch {
-      // если не залогинен/ошибка — считаем, что профиля нет
       setUser(null);
     }
   };
 
   const signIn = async (t: string) => {
-    // здесь t — это токен, который мы получим от настоящего API логина
     setToken(t);
     await SecureStore.setItemAsync(TOKEN_KEY, t);
-
-    // сразу пытаемся подтянуть профиль
     await reloadProfile();
   };
 
@@ -97,7 +78,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
     await SecureStore.deleteItemAsync(TOKEN_KEY);
-    // при необходимости позже добавим вызов logout-эндпоинта
   };
 
   const value = useMemo<SessionCtx>(
