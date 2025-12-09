@@ -13,6 +13,7 @@
 //  - /api/auth/forgot/start
 //  - /api/auth/forgot/verify
 //  - /api/auth/forgot/reset
+//  - /api/calendar/14d
 
 import type { ApiOptions } from './client';
 
@@ -61,6 +62,7 @@ export async function mockFetch<T>(
   // OTP-вход
   // ──────────────────────────────────────────────
 
+  // Запрос кода (email/телефон)
   if (path === '/api/auth/request-code' && method === 'POST') {
     const contact = (body as any)?.contact || '';
     console.log('[MOCK] request-code for', contact);
@@ -71,6 +73,7 @@ export async function mockFetch<T>(
     } as any;
   }
 
+  // Проверка кода
   if (path === '/api/auth/verify-code' && method === 'POST') {
     const { code, requestId } = (body || {}) as any;
     console.log('[MOCK] verify-code', { requestId, code });
@@ -88,6 +91,7 @@ export async function mockFetch<T>(
   // РЕГИСТРАЦИЯ (wizard 1–3)
   // ──────────────────────────────────────────────
 
+  // Шаг 1 — отправка кода
   if (path === '/api/auth/register/start' && method === 'POST') {
     const { contact, channel } = (body || {}) as any;
     console.log('[MOCK] register-start', { contact, channel });
@@ -98,6 +102,7 @@ export async function mockFetch<T>(
     } as any;
   }
 
+  // Шаг 2 — подтверждение кода
   if (path === '/api/auth/register/verify' && method === 'POST') {
     const { requestId, code } = (body || {}) as any;
     console.log('[MOCK] register-verify', { requestId, code });
@@ -111,6 +116,7 @@ export async function mockFetch<T>(
     } as any;
   }
 
+  // Шаг 3 — завершение регистрации
   if (path === '/api/auth/register/complete' && method === 'POST') {
     const { requestId, firstName, lastName } = (body || {}) as any;
     console.log('[MOCK] register-complete', { requestId, firstName, lastName });
@@ -122,8 +128,9 @@ export async function mockFetch<T>(
 
   // ──────────────────────────────────────────────
   // ВОССТАНОВЛЕНИЕ ПАРОЛЯ (forgot password)
-// ──────────────────────────────────────────────
+  // ──────────────────────────────────────────────
 
+  // Шаг 1 — отправка кода на email
   if (path === '/api/auth/forgot/start' && method === 'POST') {
     const { email } = (body || {}) as any;
     console.log('[MOCK] forgot-start', { email });
@@ -134,6 +141,7 @@ export async function mockFetch<T>(
     } as any;
   }
 
+  // Шаг 2 — проверка кода
   if (path === '/api/auth/forgot/verify' && method === 'POST') {
     const { requestId, code } = (body || {}) as any;
     console.log('[MOCK] forgot-verify', { requestId, code });
@@ -147,6 +155,7 @@ export async function mockFetch<T>(
     } as any;
   }
 
+  // Шаг 3 — установка нового пароля
   if (path === '/api/auth/forgot/reset' && method === 'POST') {
     const { requestId } = (body || {}) as any;
     console.log('[MOCK] forgot-reset', { requestId });
@@ -157,7 +166,46 @@ export async function mockFetch<T>(
   }
 
   // ──────────────────────────────────────────────
+  // КАЛЕНДАРЬ 14 ДНЕЙ
+  // ──────────────────────────────────────────────
+  if (path === '/api/calendar/14d' && method === 'GET') {
+    // Простая заглушка: 14 дней, сегодня + 13 назад
+    const today = new Date();
+
+    const days = Array.from({ length: 14 }).map((_, idx) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - idx);
+      const date = d.toISOString().slice(0, 10); // YYYY-MM-DD
+
+      // Для демонстрации: через день — всё выполнено
+      const bioCompleted = idx % 2 === 0;
+      const pillCompleted = idx % 3 === 0;
+      const earnedSeconds =
+        (bioCompleted ? 10 * 60 : 0) + (pillCompleted ? 30 : 0);
+
+      return {
+        date,
+        bioCompleted,
+        pillCompleted,
+        earnedSeconds,
+      };
+    }).reverse(); // чтобы первый элемент — самый старый, последний — сегодня
+
+    return { days } as any;
+  }
+
+  // ──────────────────────────────────────────────
   // Если не нашли мок — явно ругаемся
   // ──────────────────────────────────────────────
+
+  if (path === '/api/rating' && method === 'POST') {
+    const { contentId, score } = (body || {}) as any;
+    console.log('[MOCK] rating', { contentId, score });
+
+    return {
+      ok: true,
+    } as any;
+  }
+  
   throw new Error(`No mock implemented for path: ${method} ${path}`);
 }

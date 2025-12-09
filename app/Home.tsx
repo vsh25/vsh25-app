@@ -1,11 +1,28 @@
-import React, { useLayoutEffect, useRef, useCallback, useState, useEffect } from 'react';
-import { ScrollView, View, Text, StyleSheet, Alert, Platform, Pressable, RefreshControl } from 'react-native';
+import React, {
+  useLayoutEffect,
+  useRef,
+  useCallback,
+  useState,
+  useEffect,
+} from 'react';
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  Platform,
+  Pressable,
+  RefreshControl,
+} from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 
 import { getProgress, ProgressData } from './api/progress';
+import { getCalendar14d, CalendarDay } from './api/calendar';
+
 import Icon from './ui/Icon';
 import { theme } from './theme';
 
@@ -25,6 +42,8 @@ import KBSkeleton from './ui/KBSkeleton';
 import { useFocusEffect } from '@react-navigation/native';
 import { toast } from './ui/toast';
 import HomeHero from './ui/HomeHero';
+import CalendarStrip from './ui/CalendarStrip';
+import DayProgress from './ui/DayProgress';
 
 export default function Home({ navigation }: any) {
   const scrollRef = useRef<ScrollView>(null);
@@ -63,8 +82,11 @@ export default function Home({ navigation }: any) {
     }, 800);
   };
 
-  // debug прогресс с API (пока с моков)
+  // debug-прогресс (из /progress)
   const [debugProgress, setDebugProgress] = useState<ProgressData | null>(null);
+  // календарь 14 дней
+  const [calendar, setCalendar] = useState<CalendarDay[] | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   useEffect(() => {
     getProgress()
@@ -76,6 +98,37 @@ export default function Home({ navigation }: any) {
         console.warn('Failed to load progress', err);
       });
   }, []);
+
+  useEffect(() => {
+    getCalendar14d()
+      .then((days) => {
+        setCalendar(days);
+        console.log('Calendar from API:', days);
+
+        // по умолчанию выбираем сегодня, если есть; иначе — последний день
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const hasToday = days.some((d) => d.date === todayStr);
+        setSelectedDate(hasToday ? todayStr : days[days.length - 1]?.date);
+      })
+      .catch((err) => {
+        console.warn('Failed to load calendar', err);
+      });
+  }, []);
+
+  // выбранный день и форматтер даты
+  const selectedDay =
+    calendar && selectedDate
+      ? calendar.find((d) => d.date === selectedDate)
+      : null;
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('ru-RU', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'long',
+    });
+  };
 
   // при возврате: скролл к началу + снять лоадер CTA
   useFocusEffect(
@@ -199,7 +252,11 @@ export default function Home({ navigation }: any) {
       ref={scrollRef}
       contentContainerStyle={styles.container}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2B7EEB" />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#2B7EEB"
+        />
       }
     >
       {/* HERO по Luma */}
@@ -253,7 +310,12 @@ export default function Home({ navigation }: any) {
       <View style={styles.gap12} />
       <UIButton title="Напоминание в 21:00" onPress={scheduleDaily2100} />
       <View style={styles.gap8} />
-      <UIButton title="Отключить напоминания" variant="outline" onPress={cancelDailyReminders} />
+      <UIButton
+        title="Отключить напоминания"
+        variant="outline"
+        onPress={cancelDailyReminders}
+        fullWidth
+      />
 
       {/* маркер начала секции KB для скролла */}
       <View
@@ -270,7 +332,7 @@ export default function Home({ navigation }: any) {
         hitSlop={8}
       >
         <Icon name="book" size={22} tint={theme.color.muted} />
-        <H2 style={{ marginBottom: 0 }}>{t('kb.title', 'База знаний')}</H2>
+        <H2 style={{ marginBottom: 0 }}>{t('kb.title', 'Knowledge base')}</H2>
       </Pressable>
 
       {kbLoading ? (
@@ -293,6 +355,36 @@ export default function Home({ navigation }: any) {
         За сегодня: Биопрограмма {isCompletedToday('bio') ? '✓' : '—'} · Таблетка{' '}
         {isCompletedToday('pill') ? '✓' : '—'}
       </Text>
+
+      {/* Календарь 14 дней + выбранный день */}
+      {calendar && selectedDate && (
+        <>
+          <CalendarStrip
+            days={calendar}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+          />
+
+          {selectedDay && (
+            <View style={{ marginTop: 8 }}>
+              <Text style={styles.selectedDateText}>
+                {formatDate(selectedDay.date)}
+              </Text>
+              <Text style={styles.selectedDayStatus}>
+                Биопрограмма {selectedDay.bioCompleted ? '✓' : '—'} · Таблетка{' '}
+                {selectedDay.pillCompleted ? '✓' : '—'}
+              </Text>
+
+              <DayProgress
+                bioCompleted={selectedDay.bioCompleted}
+                pillCompleted={selectedDay.pillCompleted}
+              />
+            </View>
+          )}
+        </>
+      )}
+
+      <View style={styles.sectionGap} />
 
       <View style={{ alignItems: 'center', marginTop: 8 }}>
         <Text style={{ color: '#9CA3AF', fontSize: 12 }}>
@@ -334,4 +426,13 @@ const styles = StyleSheet.create({
   gap12: { height: 12 },
   sectionGap: { height: 20 },
   today: { color: '#64748B' },
+  selectedDateText: {
+    color: '#4B5563',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  selectedDayStatus: {
+    color: '#6B7280',
+    fontSize: 12,
+  },
 });

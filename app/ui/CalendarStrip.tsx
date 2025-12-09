@@ -1,5 +1,5 @@
 // app/ui/CalendarStrip.tsx
-// Простой календарь-лента на 14 дней по данным CalendarDay, с выбором дня.
+// Календарь-лента на 14 дней с выбором дня.
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
@@ -28,8 +28,7 @@ export default function CalendarStrip({ days, selectedDate, onSelectDate }: Prop
           const isSelected = day.date === selectedDate;
           const anyCompleted = day.bioCompleted || day.pillCompleted;
 
-          // день месяца (01–31)
-          const dayNum = day.date.slice(8, 10);
+          const dayNum = day.date.slice(8, 10); // "03" и т.п.
 
           return (
             <Pressable
@@ -107,12 +106,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.primary,
     borderColor: theme.color.primary,
   },
-  // сегодня — жёлтый обвод
+  // сегодня — жёлтая обводка
   dotToday: {
     borderWidth: 2,
     borderColor: '#FBBF24',
   },
-  // выбранный день — чуть увеличенный белый обвод
+  // выбранный день — белая обводка
   dotSelected: {
     borderWidth: 2,
     borderColor: '#E5E7EB',

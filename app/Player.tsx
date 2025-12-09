@@ -1,17 +1,24 @@
 import React, { useRef, useLayoutEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import * as WebBrowser from 'expo-web-browser';
 import { useKeepAwake } from 'expo-keep-awake';
 import UIButton from './ui/Button';
 import { useDailyProgress } from './DailyProgress';
-import { useRateVideo } from './services/hooks';
 import { useTranslation } from 'react-i18next';
 import { useSubscription } from './subscription/Subscription';
 import { useGating } from './flags/gating';
 import { toast } from './ui/toast';
+import RatingStars from './ui/RatingStars';
+import { sendRating } from './api/rating';
 
-type RouteParams = { id: 'bio' | 'pill'; title?: string; src: string; minPercent?: number };
+type RouteParams = {
+  id: 'bio' | 'pill';
+  title?: string;
+  src: string;
+  minPercent?: number;
+};
+
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function Player({ route, navigation }: { route: any; navigation: any }) {
@@ -23,7 +30,6 @@ export default function Player({ route, navigation }: { route: any; navigation: 
 
   const { t } = useTranslation();
   const { markCompletedToday, setDayStatus, isCompletedToday } = useDailyProgress();
-  const rateVideo = useRateVideo();
   const { active } = useSubscription();
   const { isPaywalled } = useGating();
 
@@ -32,7 +38,11 @@ export default function Player({ route, navigation }: { route: any; navigation: 
   const [percent, setPercent] = useState(0);
   const [completed, setCompleted] = useState<boolean>(isCompletedToday(id));
   const [showDone, setShowDone] = useState(false);
-  const [rating, setRating] = useState<number | null>(null);
+
+  const [rating, setRating] = useState<number>(0);
+  const [ratingSending, setRatingSending] = useState(false);
+  const [ratingError, setRatingError] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState<string | null>(null);
 
@@ -62,10 +72,20 @@ export default function Player({ route, navigation }: { route: any; navigation: 
 
   const saveAndExit = async () => {
     try {
-      if (rating) setDayStatus(todayISO(), { rating });
-      if (rating) await rateVideo.mutateAsync({ id, rating });
-      navigation.goBack();
-    } catch {
+      if (rating > 0) {
+        // сохраняем рейтинг локально в DailyProgress
+        setDayStatus(todayISO(), { rating });
+
+        // и отправляем на сервер (сейчас это мок через sendRating)
+        setRatingSending(true);
+        setRatingError(null);
+        await sendRating({ contentId: id, score: rating });
+      }
+    } catch (e: any) {
+      console.log('sendRating error:', e);
+      setRatingError(e?.message || 'Не удалось отправить оценку');
+    } finally {
+      setRatingSending(false);
       navigation.goBack();
     }
   };
@@ -73,7 +93,7 @@ export default function Player({ route, navigation }: { route: any; navigation: 
   const retry = () => {
     setErrorText(null);
     setLoading(true);
-    setVideoKey(k => k + 1); // пересоздаём Video
+    setVideoKey((k) => k + 1); // пересоздаём Video
   };
 
   const openExternal = async () => {
@@ -93,12 +113,18 @@ export default function Player({ route, navigation }: { route: any; navigation: 
         resizeMode={ResizeMode.CONTAIN}
         shouldPlay
         isLooping={false}
-        onLoadStart={() => { setLoading(true); setErrorText(null); }}
+        onLoadStart={() => {
+          setLoading(true);
+          setErrorText(null);
+        }}
         onReadyForDisplay={() => setLoading(false)}
         onPlaybackStatusUpdate={onStatus}
         onError={(e) => {
           setLoading(false);
-          const msg = (e?.error?.message || e?.error?.toString?.() || 'Не удалось загрузить видео');
+          const msg =
+            e?.error?.message ||
+            e?.error?.toString?.() ||
+            'Не удалось загрузить видео';
           setErrorText(msg);
           console.log('Video error:', e);
         }}
@@ -126,11 +152,14 @@ export default function Player({ route, navigation }: { route: any; navigation: 
       {/* прогресс */}
       <View style={styles.progress}>
         <Text style={styles.progressText}>
-          {percent}% {(!previewSec && completed) ? `• ${t('player.completed', 'Засчитано')} ✓` : ''}
+          {percent}%{' '}
+          {!previewSec && completed
+            ? `• ${t('player.completed', 'Засчитано')} ✓`
+            : ''}
         </Text>
       </View>
 
-      {/* завершено */}
+      {/* завершено + оценка */}
       {!previewSec && showDone && (
         <View style={styles.doneBackdrop}>
           <View style={styles.doneCard}>
@@ -138,17 +167,21 @@ export default function Player({ route, navigation }: { route: any; navigation: 
             <Text style={styles.doneCaption}>Оцените просмотр</Text>
 
             <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Pressable key={n} onPress={() => setRating(n)} style={{ padding: 6 }}>
-                  <Text style={[styles.star, { color: n <= (rating ?? 0) ? '#F59E0B' : '#CBD5E1' }]}>★</Text>
-                </Pressable>
-              ))}
+              <RatingStars
+                value={rating}
+                onChange={setRating}
+                disabled={ratingSending}
+              />
             </View>
 
+            {ratingError && (
+              <Text style={styles.ratingError}>{ratingError}</Text>
+            )}
+
             <UIButton
-              title={rateVideo.isPending ? 'Сохраняем…' : 'Сохранить и выйти'}
+              title={ratingSending ? 'Сохраняем…' : 'Сохранить и выйти'}
               onPress={saveAndExit}
-              disabled={!rating || rateVideo.isPending}
+              disabled={ratingSending || rating === 0}
               fullWidth
               style={{ marginTop: 12 }}
             />
@@ -167,7 +200,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
     padding: 24,
   },
-  loaderText: { marginTop: 12, color: '#fff', fontWeight: '600', textAlign: 'center' },
+  loaderText: {
+    marginTop: 12,
+    color: '#fff',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 
   progress: {
     position: 'absolute',
@@ -194,5 +232,10 @@ const styles = StyleSheet.create({
   doneTitle: { fontSize: 18, fontWeight: '700', marginBottom: 4, color: '#0F172A' },
   doneCaption: { color: '#64748B', marginBottom: 8 },
   starsRow: { flexDirection: 'row', justifyContent: 'center', marginVertical: 6 },
-  star: { fontSize: 28, lineHeight: 28 },
+  ratingError: {
+    marginTop: 4,
+    color: '#F97373',
+    fontSize: 12,
+    textAlign: 'center',
+  },
 });
