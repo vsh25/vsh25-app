@@ -1,15 +1,17 @@
 // app/api/progress.ts
-// Обёртка над /wp-json/vsh25/v1/progress
+// Прогресс пользователя: общее заработанное время, сегодня и серия дней.
 
 import { apiFetch } from './client';
 
 export type ProgressData = {
-  earned_seconds: number;
-  today_seconds: number;
-  streak_days: number;
+  earned_seconds: number; // всего заработано (сек)
+  today_seconds: number;  // сегодня (сек)
+  streak_days: number;    // серия дней подряд
 };
 
 export async function getProgress(): Promise<ProgressData> {
-  // path тот же, что в PHP-плагине
-  return apiFetch<ProgressData>('/wp-json/vsh25/v1/progress');
+  // Когда extra.useMocks = true, client.ts сам перекинет этот запрос в mockFetch.
+  return apiFetch<ProgressData>('/wp-json/vsh25/v1/progress', {
+    method: 'GET',
+  });
 }

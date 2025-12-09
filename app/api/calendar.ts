@@ -1,13 +1,13 @@
 // app/api/calendar.ts
-// Календарь прогресса: 14 дней с флагами выполнения и набранными секундами.
+// Календарь прогресса: 14 дней.
 
 import { apiFetch } from './client';
 
 export type CalendarDay = {
   date: string;          // YYYY-MM-DD
-  bioCompleted: boolean; // биопрограмма выполнена
-  pillCompleted: boolean;// таблетка выполнена
-  earnedSeconds: number; // набрано за день, сек.
+  bioCompleted: boolean;
+  pillCompleted: boolean;
+  earnedSeconds: number;
 };
 
 export type CalendarResponse = {
@@ -15,7 +15,8 @@ export type CalendarResponse = {
 };
 
 export async function getCalendar14d(): Promise<CalendarDay[]> {
-  // Пока path условный, будем работать через моки.
+  // client.ts при включённых моках отправит этот запрос в mockFetch,
+  // который вернёт days из app/api/mocks.ts
   const res = await apiFetch<CalendarResponse>('/api/calendar/14d', {
     method: 'GET',
   });
