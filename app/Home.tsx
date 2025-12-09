@@ -44,6 +44,7 @@ import { toast } from './ui/toast';
 import HomeHero from './ui/HomeHero';
 import CalendarStrip from './ui/CalendarStrip';
 import DayProgress from './ui/DayProgress';
+import ProgressSummary from './ui/ProgressSummary';
 
 export default function Home({ navigation }: any) {
   const scrollRef = useRef<ScrollView>(null);
@@ -271,6 +272,9 @@ export default function Home({ navigation }: any) {
 
       <LifeWidget />
 
+      {/* Карточка общей статистики из /progress */}
+      {debugProgress && <ProgressSummary data={debugProgress} />}
+
       {/* Биопрограмма */}
       <Card
         left={<Icon name="bio" size={36} tint={theme.color.primary} />}
@@ -398,16 +402,6 @@ export default function Home({ navigation }: any) {
           API: {String(apiBase)}
         </Text>
       </View>
-
-      {/* временный вывод прогресса из API (через моки) */}
-      {debugProgress && (
-        <View style={{ alignItems: 'center', marginTop: 4 }}>
-          <Text style={{ color: '#9CA3AF', fontSize: 12 }}>
-            earned: {debugProgress.earned_seconds} · today: {debugProgress.today_seconds} · streak:{' '}
-            {debugProgress.streak_days}
-          </Text>
-        </View>
-      )}
     </ScrollView>
   );
 }
