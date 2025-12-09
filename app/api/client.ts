@@ -2,18 +2,22 @@
 //
 // Базовый HTTP-клиент для работы с API VSH25.
 // Берёт базовый адрес из app.json (extra.apiBaseUrl).
-// Пока не добавляем авторизацию по токену — на бэке она cookie-based (WordPress).
-// Позже сюда добавим Bearer/refresh, когда определим точный контракт логина.
+// При extra.useMocks = true все запросы уходят в mockFetch из ./mocks.
+//
+// Позже сюда можно добавить:
+//  - Authorization: Bearer <token> (auth = true),
+//  - обработку refresh-токена.
 
 import Constants from 'expo-constants';
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface ApiOptions {
   method?: HttpMethod;
   body?: unknown;
-  auth?: boolean;         // резерв на будущее (Bearer и т.п.)
+  auth?: boolean; // резерв на будущее (Bearer и т.п.)
   signal?: AbortSignal;
+  headers?: Record<string, string>;
 }
 
 // Читаем настройки из app.json → expo.expoConfig.extra
@@ -25,14 +29,14 @@ const USE_MOCKS: boolean = !!extra.useMocks;
 /**
  * Универсальный запрос к API.
  *
- * path — относительный путь (например, "/wp-json/vsh25/v1/me")
- * T    — ожидаемый тип ответа (определим позже в типах).
+ * path — относительный путь (например, "/wp-json/vsh25/v1/me" или "wp-json/vsh25/v1/me")
+ * T    — ожидаемый тип ответа.
  */
 export async function apiFetch<T>(
   path: string,
   options: ApiOptions = {}
 ): Promise<T> {
-  const { method = 'GET', body, auth = false, signal } = options;
+  const { method = 'GET', body, auth = false, signal, headers: extraHeaders } = options;
 
   // 1) Режим моков — для разработки без реального бэка.
   if (USE_MOCKS) {
@@ -40,28 +44,37 @@ export async function apiFetch<T>(
     return mockFetch<T>(path, options);
   }
 
-  // 2) Проверяем, что базовый адрес задали
+  // 2) Проверяем, что базовый адрес задан
   if (!API_BASE) {
     throw new Error('API base url is not configured (extra.apiBaseUrl)');
   }
 
   // Если path уже абсолютный (начинается с http), используем его как есть.
-  // Иначе приклеиваем к API_BASE.
-  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  // Иначе аккуратно приклеиваем к API_BASE.
+  let url: string;
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    url = path;
+  } else {
+    const base = API_BASE.replace(/\/+$/, '');
+    const rel = path.startsWith('/') ? path : `/${path}`;
+    url = base + rel;
+  }
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
+    ...(extraHeaders || {}),
   };
 
   let fetchBody: string | undefined;
 
   if (body !== undefined) {
-    headers['Content-Type'] = 'application/json';
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
     fetchBody = JSON.stringify(body);
   }
 
   // auth сейчас не используем, потому что авторизация cookie-based (WordPress).
-  // Позже сюда добавим Authorization: Bearer <token>, когда будет контракт.
+  // Позже сюда можно добавить:
+  // if (auth) headers.Authorization = `Bearer ${token}`;
 
   const response = await fetch(url, {
     method,
@@ -70,12 +83,20 @@ export async function apiFetch<T>(
     signal,
   });
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(text || `HTTP ${response.status}`);
-  }
+  const text = await response.text().catch(() => '');
 
-  const text = await response.text();
+  if (!response.ok) {
+    // пробуем вытащить сообщение из JSON-ответа, если это он
+    try {
+      const data = text ? JSON.parse(text) : null;
+      const msg =
+        (data && (data.message || data.error || data.detail)) ||
+        `HTTP ${response.status}`;
+      throw new Error(msg);
+    } catch {
+      throw new Error(text || `HTTP ${response.status}`);
+    }
+  }
 
   if (!text) {
     // иногда API может вернуть пустой ответ с 204 и т.п.

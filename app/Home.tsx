@@ -58,8 +58,8 @@ export default function Home({ navigation }: any) {
 
   const bioLocked = gating.isPaywalled('bio') && !active;
   const pillLocked = gating.isPaywalled('pill') && !active;
-  const bioDone = isCompletedToday('bio');
-  const pillDone = isCompletedToday('pill');
+  const bioDoneToday = isCompletedToday('bio');
+  const pillDoneToday = isCompletedToday('pill');
 
   const apiBase = (Constants.expoConfig?.extra as any)?.apiBaseUrl;
 
@@ -83,10 +83,10 @@ export default function Home({ navigation }: any) {
     }, 800);
   };
 
-  // debug-прогресс (из /progress)
+  // прогресс из API
   const [debugProgress, setDebugProgress] = useState<ProgressData | null>(null);
   // календарь 14 дней
-  const [calendar, setCalendar] = useState<CalendarDay[] | null>(null);
+  const [calendarRaw, setCalendarRaw] = useState<CalendarDay[] | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   useEffect(() => {
@@ -103,10 +103,9 @@ export default function Home({ navigation }: any) {
   useEffect(() => {
     getCalendar14d()
       .then((days) => {
-        setCalendar(days);
+        setCalendarRaw(days);
         console.log('Calendar from API:', days);
 
-        // по умолчанию выбираем сегодня, если есть; иначе — последний день
         const todayStr = new Date().toISOString().slice(0, 10);
         const hasToday = days.some((d) => d.date === todayStr);
         setSelectedDate(hasToday ? todayStr : days[days.length - 1]?.date);
@@ -115,6 +114,20 @@ export default function Home({ navigation }: any) {
         console.warn('Failed to load calendar', err);
       });
   }, []);
+
+  // патчим календарь: сегодняшний день берём из useDailyProgress
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const calendar: CalendarDay[] | null = calendarRaw
+    ? calendarRaw.map((d) =>
+        d.date === todayStr
+          ? {
+              ...d,
+              bioCompleted: bioDoneToday,
+              pillCompleted: pillDoneToday,
+            }
+          : d
+      )
+    : null;
 
   // выбранный день и форматтер даты
   const selectedDay =
@@ -282,7 +295,7 @@ export default function Home({ navigation }: any) {
         subtitle={
           bioLocked ? '🔒 Требует подписку' : 'Ежедневная практика для активного долголетия'
         }
-        right={bioLocked ? <Text style={styles.lock}>🔒</Text> : bioDone ? <DoneBadge /> : null}
+        right={bioLocked ? <Text style={styles.lock}>🔒</Text> : bioDoneToday ? <DoneBadge /> : null}
         onPress={goBio}
       />
 
@@ -293,7 +306,9 @@ export default function Home({ navigation }: any) {
         left={<Icon name="pill" size={36} tint={theme.color.primary} />}
         title={pill.title}
         subtitle={pillLocked ? '🔒 Требует подписку' : 'Быстрый эффект, когда нет времени'}
-        right={pillLocked ? <Text style={styles.lock}>🔒</Text> : pillDone ? <DoneBadge /> : null}
+        right={
+          pillLocked ? <Text style={styles.lock}>🔒</Text> : pillDoneToday ? <DoneBadge /> : null
+        }
         onPress={() =>
           pillLocked ? navigation.navigate('Paywall') : navigation.navigate('Player', pill)
         }
@@ -356,8 +371,7 @@ export default function Home({ navigation }: any) {
       {/* статус за сегодня */}
       <View style={styles.sectionGap} />
       <Text style={styles.today}>
-        За сегодня: Биопрограмма {isCompletedToday('bio') ? '✓' : '—'} · Таблетка{' '}
-        {isCompletedToday('pill') ? '✓' : '—'}
+        За сегодня: Биопрограмма {bioDoneToday ? '✓' : '—'} · Таблетка {pillDoneToday ? '✓' : '—'}
       </Text>
 
       {/* Календарь 14 дней + выбранный день */}
